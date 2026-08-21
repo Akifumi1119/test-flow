@@ -1,4 +1,4 @@
-import { HashRouter, Navigate, Outlet, Route, Routes } from 'react-router-dom'
+import { BrowserRouter, Navigate, Outlet, Route, Routes } from 'react-router-dom'
 import { AppLayout } from './layouts/AppLayout'
 import { DashboardPage } from './pages/DashboardPage'
 import { LoginPage } from './pages/LoginPage'
@@ -13,7 +13,7 @@ function PrivateRoute() {
 
 function App() {
   return (
-    <HashRouter>
+    <BrowserRouter basename="/test-flow">
       <Routes>
         {/* 認証不要 */}
         <Route path="/login" element={<LoginPage />} />
@@ -28,7 +28,7 @@ function App() {
           </Route>
         </Route>
       </Routes>
-    </HashRouter>
+    </BrowserRouter>
   )
 }
 
