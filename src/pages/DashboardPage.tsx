@@ -1,3 +1,4 @@
+import { API_BASE } from "../utils/api";
 import {
   type FormEvent,
   useCallback,
@@ -45,7 +46,7 @@ export function DashboardPage() {
     setError(null);
     try {
       const userId = localStorage.getItem("userId") ?? "";
-      const res = await fetch(`/api/projects/${userId}`, {
+      const res = await fetch(`${API_BASE}/api/projects/${userId}`, {
         headers: buildAuthHeaders(),
       });
       if (res.status === 401) {
@@ -83,7 +84,7 @@ export function DashboardPage() {
     setCreateError(null);
     try {
       const userId = Number(localStorage.getItem("userId") ?? "0");
-      const res = await fetch("/api/projects", {
+      const res = await fetch(`${API_BASE}/api/projects`, {
         method: "POST",
         headers: buildAuthHeaders(),
         body: JSON.stringify({

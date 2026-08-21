@@ -1,3 +1,4 @@
+import { API_BASE } from "../utils/api";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -35,7 +36,7 @@ export function TaskRegisterPage() {
   const fetchMembers = useCallback(async () => {
     setMembersLoading(true);
     try {
-      const res = await fetch(`/api/projects/${projectId}/members`, {
+      const res = await fetch(`${API_BASE}/api/projects/${projectId}/members`, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem("token") ?? ""}`,
         },
@@ -85,7 +86,7 @@ export function TaskRegisterPage() {
         body.user_name = Number(assigneeId);
       }
 
-      const res = await fetch("/api/tasks", {
+      const res = await fetch(`${API_BASE}/api/tasks`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

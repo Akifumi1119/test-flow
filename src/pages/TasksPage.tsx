@@ -1,3 +1,4 @@
+import { API_BASE } from "../utils/api";
 import { type FormEvent, useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { formatDate } from "../utils/formatDate";
@@ -95,7 +96,7 @@ export function TasksPage() {
     setDetailLoading(true);
     setDetailError(null);
     try {
-      const res = await fetch(`/api/tasks/${taskId}`, {
+      const res = await fetch(`${API_BASE}/api/tasks/${taskId}`, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem("token") ?? ""}`,
         },
@@ -127,7 +128,7 @@ export function TasksPage() {
     setSavingContent(true);
     setSaveContentError(null);
     try {
-      const res = await fetch(`/api/tasks/${taskDetail.task_id}`, {
+      const res = await fetch(`${API_BASE}/api/tasks/${taskDetail.task_id}`, {
         method: "PUT",
         headers: buildAuthHeaders(),
         body: JSON.stringify({
@@ -164,7 +165,7 @@ export function TasksPage() {
     setUpdatingComment(true);
     setUpdateCommentError(null);
     try {
-      const res = await fetch(`/api/comments/${editingCommentId}`, {
+      const res = await fetch(`${API_BASE}/api/comments/${editingCommentId}`, {
         method: "PUT",
         headers: buildAuthHeaders(),
         body: JSON.stringify({
@@ -196,7 +197,7 @@ export function TasksPage() {
     if (!taskDetail) return;
     setDeletingCommentId(commentId);
     try {
-      const res = await fetch(`/api/comments/${commentId}`, {
+      const res = await fetch(`${API_BASE}/api/comments/${commentId}`, {
         method: "DELETE",
         headers: buildAuthHeaders(),
         body: JSON.stringify({
@@ -227,7 +228,7 @@ export function TasksPage() {
     if (!taskDetail) return;
     setDeletingTask(true);
     try {
-      const res = await fetch(`/api/tasks/${taskDetail.task_id}`, {
+      const res = await fetch(`${API_BASE}/api/tasks/${taskDetail.task_id}`, {
         method: "DELETE",
         headers: buildAuthHeaders(),
         body: JSON.stringify({
@@ -259,7 +260,7 @@ export function TasksPage() {
     setSubmittingComment(true);
     setCommentError(null);
     try {
-      const res = await fetch(`/api/comments/${taskDetail.task_id}`, {
+      const res = await fetch(`${API_BASE}/api/comments/${taskDetail.task_id}`, {
         method: "POST",
         headers: buildAuthHeaders(),
         body: JSON.stringify({
@@ -355,7 +356,7 @@ export function TasksPage() {
     setLoading(true);
     setFetchError(null);
     try {
-      const res = await fetch(`/api/tasks?project_id=${Number(projectId)}`, {
+      const res = await fetch(`${API_BASE}/api/tasks?project_id=${Number(projectId)}`, {
         method: "GET",
         headers: buildAuthHeaders(),
       });
@@ -379,7 +380,7 @@ export function TasksPage() {
   const fetchAuthority = async () => {
     try {
       const res = await fetch(
-        `/api/projects/${projectId}/authority?user_id=${userId}`,
+        `${API_BASE}/api/projects/${projectId}/authority?user_id=${userId}`,
         {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("token") ?? ""}`,
@@ -415,7 +416,7 @@ export function TasksPage() {
   const fetchMembers = async () => {
     setMembersLoading(true);
     try {
-      const res = await fetch(`/api/projects/${projectId}/members`, {
+      const res = await fetch(`${API_BASE}/api/projects/${projectId}/members`, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem("token") ?? ""}`,
         },
@@ -461,7 +462,7 @@ export function TasksPage() {
     setMemberChecking(true);
     try {
       const res = await fetch(
-        `/api/users/check?email=${encodeURIComponent(email)}&project_id=${Number(projectId)}`,
+        `${API_BASE}/api/users/check?email=${encodeURIComponent(email)}&project_id=${Number(projectId)}`,
       );
       const data = await res.json();
       if (!res.ok) {
@@ -505,7 +506,7 @@ export function TasksPage() {
     setApplying(true);
     setApplyError(null);
     try {
-      const res = await fetch("/api/projects", {
+      const res = await fetch(`${API_BASE}/api/projects`, {
         method: "PUT",
         headers: buildAuthHeaders(),
         body: JSON.stringify({
@@ -537,7 +538,7 @@ export function TasksPage() {
     setDeleting(true);
     setDeleteError(null);
     try {
-      const res = await fetch(`/api/projects/${projectId}`, {
+      const res = await fetch(`${API_BASE}/api/projects/${projectId}`, {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${localStorage.getItem("token") ?? ""}`,

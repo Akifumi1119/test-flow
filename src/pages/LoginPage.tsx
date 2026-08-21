@@ -1,3 +1,4 @@
+import { API_BASE } from "../utils/api";
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import "./LoginPage.css";
@@ -23,7 +24,7 @@ export function LoginPage() {
     setLoading(true);
 
     try {
-      const res = await fetch("/api/login", {
+      const res = await fetch(`${API_BASE}/api/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),
