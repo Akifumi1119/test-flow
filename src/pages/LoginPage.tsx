@@ -8,10 +8,43 @@ interface LoginForm {
   password: string;
 }
 
+const HEALTH_INTERVAL = 4000;
+const HEALTH_TIMEOUT = 75000;
+
 export function LoginPage() {
   useEffect(() => {
     document.title = "ログイン - TaskFlow";
   }, []);
+
+  const [backendReady, setBackendReady] = useState(false);
+  const [backendTimedOut, setBackendTimedOut] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    const startedAt = Date.now();
+
+    const check = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/api/health`);
+        if (res.ok) {
+          if (!cancelled) setBackendReady(true);
+          return;
+        }
+      } catch {
+        // スリープ中
+      }
+      if (cancelled) return;
+      if (Date.now() - startedAt >= HEALTH_TIMEOUT) {
+        setBackendTimedOut(true);
+      } else {
+        setTimeout(check, HEALTH_INTERVAL);
+      }
+    };
+
+    check();
+    return () => { cancelled = true; };
+  }, []);
+
   const [form, setForm] = useState<LoginForm>({ email: "", password: "" });
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -48,6 +81,34 @@ export function LoginPage() {
       setLoading(false);
     }
   };
+
+  if (!backendReady) {
+    return (
+      <div className="login-container">
+        <div className="login-card">
+          <h1 className="login-title">TaskFlow</h1>
+          {backendTimedOut ? (
+            <div className="login-wake-timeout">
+              <p>サーバーへの接続がタイムアウトしました。</p>
+              <button
+                className="login-button"
+                onClick={() => window.location.reload()}
+              >
+                再試行
+              </button>
+            </div>
+          ) : (
+            <div className="login-wake">
+              <div className="login-wake-spinner" aria-hidden="true" />
+              <p className="login-wake-message">
+                サーバーを起動中です。しばらくお待ちください…
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="login-container">
