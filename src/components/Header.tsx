@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { API_BASE } from "../utils/api";
 import "./Header.css";
 
 interface Props {
@@ -24,7 +25,7 @@ export function Header({ userName }: Props) {
   const handleLogout = async () => {
     const token = localStorage.getItem("token");
     try {
-      await fetch("/api/logout", {
+      await fetch(`${API_BASE}/api/logout`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
       });
