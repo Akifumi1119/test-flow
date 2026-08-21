@@ -1,4 +1,10 @@
-import { type FormEvent, useCallback, useEffect, useRef, useState } from "react";
+import {
+  type FormEvent,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { useNavigate } from "react-router-dom";
 import "./DashboardPage.css";
 
@@ -58,6 +64,10 @@ export function DashboardPage() {
       setLoading(false);
     }
   }, [handleUnauthorized]);
+
+  useEffect(() => {
+    document.title = "トップページ - TaskFlow";
+  }, []);
 
   const initialized = useRef(false);
   useEffect(() => {

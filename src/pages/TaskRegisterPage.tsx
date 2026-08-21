@@ -55,6 +55,10 @@ export function TaskRegisterPage() {
     }
   }, [projectId, handleUnauthorized]);
 
+  useEffect(() => {
+    document.title = "タスク登録 - TaskFlow";
+  }, []);
+
   const initialized = useRef(false);
   useEffect(() => {
     if (initialized.current) return;
@@ -148,7 +152,9 @@ export function TaskRegisterPage() {
         </select>
 
         {error && (
-          <p className="task-register-error" role="alert">{error}</p>
+          <p className="task-register-error" role="alert">
+            {error}
+          </p>
         )}
 
         <div className="task-register-actions">

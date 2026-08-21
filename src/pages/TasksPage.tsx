@@ -79,9 +79,15 @@ export function TasksPage() {
   const [editingCommentId, setEditingCommentId] = useState<number | null>(null);
   const [editCommentText, setEditCommentText] = useState("");
   const [updatingComment, setUpdatingComment] = useState(false);
-  const [updateCommentError, setUpdateCommentError] = useState<string | null>(null);
-  const [confirmDeleteCommentId, setConfirmDeleteCommentId] = useState<number | null>(null);
-  const [deletingCommentId, setDeletingCommentId] = useState<number | null>(null);
+  const [updateCommentError, setUpdateCommentError] = useState<string | null>(
+    null,
+  );
+  const [confirmDeleteCommentId, setConfirmDeleteCommentId] = useState<
+    number | null
+  >(null);
+  const [deletingCommentId, setDeletingCommentId] = useState<number | null>(
+    null,
+  );
   const [confirmDeleteTask, setConfirmDeleteTask] = useState(false);
   const [deletingTask, setDeletingTask] = useState(false);
 
@@ -90,7 +96,9 @@ export function TasksPage() {
     setDetailError(null);
     try {
       const res = await fetch(`/api/tasks/${taskId}`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem("token") ?? ""}` },
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token") ?? ""}`,
+        },
       });
       if (res.status === 401) {
         handleUnauthorized();
@@ -151,7 +159,8 @@ export function TasksPage() {
   };
 
   const handleUpdateComment = async () => {
-    if (!taskDetail || editingCommentId === null || !editCommentText.trim()) return;
+    if (!taskDetail || editingCommentId === null || !editCommentText.trim())
+      return;
     setUpdatingComment(true);
     setUpdateCommentError(null);
     try {
@@ -389,6 +398,10 @@ export function TasksPage() {
       // 取得失敗時はデフォルト（メンバー）として継続
     }
   };
+
+  useEffect(() => {
+    document.title = "タスク一覧 - TaskFlow";
+  }, []);
 
   const initialized = useRef(false);
   useEffect(() => {
@@ -880,13 +893,18 @@ export function TasksPage() {
               <p className="tasks-detail-loading">読み込み中...</p>
             )}
             {detailError && (
-              <p className="tasks-modal-error" role="alert">{detailError}</p>
+              <p className="tasks-modal-error" role="alert">
+                {detailError}
+              </p>
             )}
 
             {taskDetail && (
               <>
                 <div className="tasks-detail-header">
-                  <h2 id="task-detail-modal-title" className="tasks-detail-title">
+                  <h2
+                    id="task-detail-modal-title"
+                    className="tasks-detail-title"
+                  >
                     {taskDetail.title}
                   </h2>
                   <div className="tasks-detail-meta">
@@ -898,27 +916,36 @@ export function TasksPage() {
                         disabled={savingContent}
                       >
                         {Object.entries(STATUS_LABEL).map(([value, label]) => (
-                          <option key={value} value={value}>{label}</option>
+                          <option key={value} value={value}>
+                            {label}
+                          </option>
                         ))}
                       </select>
                     ) : (
-                      <span className={`tasks-status tasks-status--${taskDetail.status}`}>
+                      <span
+                        className={`tasks-status tasks-status--${taskDetail.status}`}
+                      >
                         {STATUS_LABEL[taskDetail.status] ?? taskDetail.status}
                       </span>
                     )}
                     <p className="tasks-detail-meta-info">
-                      作成者:{taskDetail.created_by} {formatDate(taskDetail.created_at)}
+                      作成者:{taskDetail.created_by}{" "}
+                      {formatDate(taskDetail.created_at)}
                     </p>
                     {isEditingContent ? (
                       <select
                         className="tasks-select tasks-detail-status-select"
                         value={editAssigneeId}
-                        onChange={(e) => setEditAssigneeId(Number(e.target.value))}
+                        onChange={(e) =>
+                          setEditAssigneeId(Number(e.target.value))
+                        }
                         disabled={savingContent || membersLoading}
                       >
                         <option value={0}>未割り当て</option>
                         {members.map((m) => (
-                          <option key={m.user_id} value={m.user_id}>{m.name}</option>
+                          <option key={m.user_id} value={m.user_id}>
+                            {m.name}
+                          </option>
                         ))}
                       </select>
                     ) : (
@@ -931,7 +958,12 @@ export function TasksPage() {
                         <button
                           type="button"
                           className="tasks-modal-btn-cancel"
-                          onClick={() => { setIsEditingContent(false); setEditContent(""); setSaveContentError(null); setConfirmDeleteTask(false); }}
+                          onClick={() => {
+                            setIsEditingContent(false);
+                            setEditContent("");
+                            setSaveContentError(null);
+                            setConfirmDeleteTask(false);
+                          }}
                           disabled={savingContent || deletingTask}
                         >
                           キャンセル
@@ -946,7 +978,9 @@ export function TasksPage() {
                         </button>
                         {confirmDeleteTask ? (
                           <div className="tasks-detail-task-delete-confirm">
-                            <span className="tasks-detail-task-delete-confirm-text">本当に削除しますか？</span>
+                            <span className="tasks-detail-task-delete-confirm-text">
+                              本当に削除しますか？
+                            </span>
                             <button
                               type="button"
                               className="tasks-modal-btn-cancel"
@@ -983,7 +1017,9 @@ export function TasksPage() {
                           setIsEditingContent(true);
                           setEditContent(taskDetail.content);
                           setEditStatus(taskDetail.status);
-                          const current = members.find((m) => m.name === taskDetail.user_name);
+                          const current = members.find(
+                            (m) => m.name === taskDetail.user_name,
+                          );
                           setEditAssigneeId(current?.user_id ?? 0);
                         }}
                       >
@@ -1004,7 +1040,9 @@ export function TasksPage() {
                       disabled={savingContent}
                     />
                     {saveContentError && (
-                      <p className="tasks-modal-error" role="alert">{saveContentError}</p>
+                      <p className="tasks-modal-error" role="alert">
+                        {saveContentError}
+                      </p>
                     )}
                   </>
                 ) : (
@@ -1015,91 +1053,127 @@ export function TasksPage() {
 
                 {taskDetail.comments.length > 0 && (
                   <ul className="tasks-detail-comments-list">
-                    {[...taskDetail.comments].sort((a, b) => a.comment_id - b.comment_id).map((c) => (
-                      <li key={c.comment_id} className="tasks-detail-comment-item">
-                        <div className="tasks-detail-comment-body">
-                          <div className="tasks-detail-comment-meta">
-                            <span className="tasks-detail-comment-author">{c.created_by}</span>
-                            <span className="tasks-detail-comment-date">{formatDate(c.created_at)}</span>
+                    {[...taskDetail.comments]
+                      .sort((a, b) => a.comment_id - b.comment_id)
+                      .map((c) => (
+                        <li
+                          key={c.comment_id}
+                          className="tasks-detail-comment-item"
+                        >
+                          <div className="tasks-detail-comment-body">
+                            <div className="tasks-detail-comment-meta">
+                              <span className="tasks-detail-comment-author">
+                                {c.created_by}
+                              </span>
+                              <span className="tasks-detail-comment-date">
+                                {formatDate(c.created_at)}
+                              </span>
+                            </div>
+                            {editingCommentId === c.comment_id ? (
+                              <>
+                                <textarea
+                                  className="tasks-detail-comment-edit-textarea"
+                                  value={editCommentText}
+                                  onChange={(e) =>
+                                    setEditCommentText(e.target.value)
+                                  }
+                                  rows={3}
+                                  autoFocus
+                                  disabled={updatingComment}
+                                />
+                                {updateCommentError && (
+                                  <p className="tasks-modal-error" role="alert">
+                                    {updateCommentError}
+                                  </p>
+                                )}
+                                <div className="tasks-detail-comment-edit-actions">
+                                  <button
+                                    type="button"
+                                    className="tasks-modal-btn-cancel"
+                                    onClick={() => {
+                                      setEditingCommentId(null);
+                                      setEditCommentText("");
+                                      setUpdateCommentError(null);
+                                    }}
+                                    disabled={updatingComment}
+                                  >
+                                    キャンセル
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="tasks-modal-btn-submit"
+                                    onClick={handleUpdateComment}
+                                    disabled={
+                                      updatingComment || !editCommentText.trim()
+                                    }
+                                  >
+                                    {updatingComment ? "更新中..." : "更新"}
+                                  </button>
+                                </div>
+                              </>
+                            ) : (
+                              <span className="tasks-detail-comment-text">
+                                {c.content}
+                              </span>
+                            )}
                           </div>
-                          {editingCommentId === c.comment_id ? (
-                            <>
-                              <textarea
-                                className="tasks-detail-comment-edit-textarea"
-                                value={editCommentText}
-                                onChange={(e) => setEditCommentText(e.target.value)}
-                                rows={3}
-                                autoFocus
-                                disabled={updatingComment}
-                              />
-                              {updateCommentError && (
-                                <p className="tasks-modal-error" role="alert">{updateCommentError}</p>
-                              )}
-                              <div className="tasks-detail-comment-edit-actions">
+                          {c.created_by_id ===
+                            Number(localStorage.getItem("userId")) &&
+                            editingCommentId !== c.comment_id &&
+                            (confirmDeleteCommentId === c.comment_id ? (
+                              <div className="tasks-detail-comment-delete-confirm">
+                                <span className="tasks-detail-comment-delete-confirm-text">
+                                  削除しますか？
+                                </span>
                                 <button
                                   type="button"
                                   className="tasks-modal-btn-cancel"
-                                  onClick={() => { setEditingCommentId(null); setEditCommentText(""); setUpdateCommentError(null); }}
-                                  disabled={updatingComment}
+                                  onClick={() =>
+                                    setConfirmDeleteCommentId(null)
+                                  }
+                                  disabled={deletingCommentId === c.comment_id}
                                 >
                                   キャンセル
                                 </button>
                                 <button
                                   type="button"
-                                  className="tasks-modal-btn-submit"
-                                  onClick={handleUpdateComment}
-                                  disabled={updatingComment || !editCommentText.trim()}
+                                  className="tasks-detail-comment-delete-btn"
+                                  onClick={() =>
+                                    handleDeleteComment(c.comment_id)
+                                  }
+                                  disabled={deletingCommentId === c.comment_id}
                                 >
-                                  {updatingComment ? "更新中..." : "更新"}
+                                  {deletingCommentId === c.comment_id
+                                    ? "削除中..."
+                                    : "OK"}
                                 </button>
                               </div>
-                            </>
-                          ) : (
-                            <span className="tasks-detail-comment-text">{c.content}</span>
-                          )}
-                        </div>
-                        {c.created_by_id === Number(localStorage.getItem("userId")) && editingCommentId !== c.comment_id && (
-                          confirmDeleteCommentId === c.comment_id ? (
-                            <div className="tasks-detail-comment-delete-confirm">
-                              <span className="tasks-detail-comment-delete-confirm-text">削除しますか？</span>
-                              <button
-                                type="button"
-                                className="tasks-modal-btn-cancel"
-                                onClick={() => setConfirmDeleteCommentId(null)}
-                                disabled={deletingCommentId === c.comment_id}
-                              >
-                                キャンセル
-                              </button>
-                              <button
-                                type="button"
-                                className="tasks-detail-comment-delete-btn"
-                                onClick={() => handleDeleteComment(c.comment_id)}
-                                disabled={deletingCommentId === c.comment_id}
-                              >
-                                {deletingCommentId === c.comment_id ? "削除中..." : "OK"}
-                              </button>
-                            </div>
-                          ) : (
-                            <div className="tasks-detail-comment-actions">
-                              <button
-                                type="button"
-                                className="tasks-detail-comment-edit-btn"
-                                onClick={() => { setEditingCommentId(c.comment_id); setEditCommentText(c.content); setUpdateCommentError(null); }}
-                              >
-                                編集
-                              </button>
-                              <button
-                                type="button"
-                                className="tasks-detail-comment-delete-btn"
-                                onClick={() => setConfirmDeleteCommentId(c.comment_id)}
-                              >
-                                削除
-                              </button>
-                            </div>
-                          )
-                        )}
-                      </li>
-                    ))}
+                            ) : (
+                              <div className="tasks-detail-comment-actions">
+                                <button
+                                  type="button"
+                                  className="tasks-detail-comment-edit-btn"
+                                  onClick={() => {
+                                    setEditingCommentId(c.comment_id);
+                                    setEditCommentText(c.content);
+                                    setUpdateCommentError(null);
+                                  }}
+                                >
+                                  編集
+                                </button>
+                                <button
+                                  type="button"
+                                  className="tasks-detail-comment-delete-btn"
+                                  onClick={() =>
+                                    setConfirmDeleteCommentId(c.comment_id)
+                                  }
+                                >
+                                  削除
+                                </button>
+                              </div>
+                            ))}
+                        </li>
+                      ))}
                   </ul>
                 )}
 
@@ -1113,7 +1187,9 @@ export function TasksPage() {
                 />
 
                 {commentError && (
-                  <p className="tasks-modal-error" role="alert">{commentError}</p>
+                  <p className="tasks-modal-error" role="alert">
+                    {commentError}
+                  </p>
                 )}
 
                 <div className="tasks-detail-submit-row">
