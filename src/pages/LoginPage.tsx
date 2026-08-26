@@ -1,6 +1,9 @@
 import { API_BASE } from "../utils/api";
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { ErrorMessage } from "../components/ErrorMessage";
+import { PasswordInput } from "../components/PasswordInput";
+import { Spinner } from "../components/Spinner";
 import "./LoginPage.css";
 
 interface LoginForm {
@@ -11,6 +14,7 @@ interface LoginForm {
 const HEALTH_INTERVAL = 4000;
 const HEALTH_TIMEOUT = 75000;
 
+// タブの名前
 export function LoginPage() {
   useEffect(() => {
     document.title = "ログイン - TaskFlow";
@@ -23,6 +27,7 @@ export function LoginPage() {
     let cancelled = false;
     const startedAt = Date.now();
 
+    // サーバーが起動中か確認
     const check = async () => {
       try {
         const res = await fetch(`${API_BASE}/api/health`);
@@ -42,15 +47,17 @@ export function LoginPage() {
     };
 
     check();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const [form, setForm] = useState<LoginForm>({ email: "", password: "" });
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
 
+  // ログイン
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -99,7 +106,7 @@ export function LoginPage() {
             </div>
           ) : (
             <div className="login-wake">
-              <div className="login-wake-spinner" aria-hidden="true" />
+              <Spinner size={40} />
               <p className="login-wake-message">
                 サーバーを起動中です。しばらくお待ちください…
               </p>
@@ -130,82 +137,17 @@ export function LoginPage() {
             />
           </div>
 
-          <div className="field">
-            <label htmlFor="password">パスワード</label>
-            <div className="input-wrapper">
-              <input
-                id="password"
-                type={showPassword ? "text" : "password"}
-                autoComplete="current-password"
-                required
-                value={form.password}
-                onChange={(e) => setForm({ ...form, password: e.target.value })}
-                placeholder="パスワードを入力"
-              />
-              <button
-                type="button"
-                className="password-toggle"
-                onClick={() => setShowPassword((prev) => !prev)}
-                aria-label={
-                  showPassword ? "パスワードを隠す" : "パスワードを表示する"
-                }
-              >
-                {showPassword ? (
-                  <svg
-                    width="18"
-                    height="18"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    aria-hidden="true"
-                  >
-                    <path
-                      d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19M1 1l22 22"
-                      stroke="currentColor"
-                      strokeWidth="1.8"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                    <circle
-                      cx="12"
-                      cy="12"
-                      r="3"
-                      stroke="currentColor"
-                      strokeWidth="1.8"
-                    />
-                  </svg>
-                ) : (
-                  <svg
-                    width="18"
-                    height="18"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    aria-hidden="true"
-                  >
-                    <path
-                      d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"
-                      stroke="currentColor"
-                      strokeWidth="1.8"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                    <circle
-                      cx="12"
-                      cy="12"
-                      r="3"
-                      stroke="currentColor"
-                      strokeWidth="1.8"
-                    />
-                  </svg>
-                )}
-              </button>
-            </div>
-          </div>
+          <PasswordInput
+            id="password"
+            label="パスワード"
+            value={form.password}
+            onChange={(e) => setForm({ ...form, password: e.target.value })}
+            placeholder="パスワードを入力"
+            autoComplete="current-password"
+            required
+          />
 
-          {error && (
-            <p className="login-error" role="alert">
-              {error}
-            </p>
-          )}
+          {error && <ErrorMessage message={error} />}
 
           <button type="submit" className="login-button" disabled={loading}>
             {loading ? "ログイン中..." : "ログイン"}

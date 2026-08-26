@@ -1,6 +1,8 @@
 import { API_BASE } from "../utils/api";
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { ErrorMessage } from "../components/ErrorMessage";
+import { PasswordInput } from "../components/PasswordInput";
 import "./RegisterPage.css";
 
 interface RegisterForm {
@@ -11,6 +13,7 @@ interface RegisterForm {
 }
 
 export function RegisterPage() {
+  // タブの名前
   useEffect(() => {
     document.title = "新規登録 - TaskFlow";
   }, []);
@@ -22,10 +25,9 @@ export function RegisterPage() {
   });
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
-  const [showPasswordConfirm, setShowPasswordConfirm] = useState(false);
   const navigate = useNavigate();
 
+  // ユーザー登録API
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -101,157 +103,29 @@ export function RegisterPage() {
             />
           </div>
 
-          <div className="field">
-            <label htmlFor="password">パスワード</label>
-            <div className="input-wrapper">
-              <input
-                id="password"
-                type={showPassword ? "text" : "password"}
-                autoComplete="new-password"
-                required
-                value={form.password}
-                onChange={(e) => setForm({ ...form, password: e.target.value })}
-                placeholder="8文字以上で入力"
-              />
-              <button
-                type="button"
-                className="password-toggle"
-                onClick={() => setShowPassword((prev) => !prev)}
-                aria-label={
-                  showPassword ? "パスワードを隠す" : "パスワードを表示する"
-                }
-              >
-                {showPassword ? (
-                  <svg
-                    width="18"
-                    height="18"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    aria-hidden="true"
-                  >
-                    <path
-                      d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19M1 1l22 22"
-                      stroke="currentColor"
-                      strokeWidth="1.8"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                    <circle
-                      cx="12"
-                      cy="12"
-                      r="3"
-                      stroke="currentColor"
-                      strokeWidth="1.8"
-                    />
-                  </svg>
-                ) : (
-                  <svg
-                    width="18"
-                    height="18"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    aria-hidden="true"
-                  >
-                    <path
-                      d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"
-                      stroke="currentColor"
-                      strokeWidth="1.8"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                    <circle
-                      cx="12"
-                      cy="12"
-                      r="3"
-                      stroke="currentColor"
-                      strokeWidth="1.8"
-                    />
-                  </svg>
-                )}
-              </button>
-            </div>
-          </div>
+          <PasswordInput
+            id="password"
+            label="パスワード"
+            value={form.password}
+            onChange={(e) => setForm({ ...form, password: e.target.value })}
+            placeholder="8文字以上で入力"
+            autoComplete="new-password"
+            required
+          />
 
-          <div className="field">
-            <label htmlFor="passwordConfirm">パスワード（確認）</label>
-            <div className="input-wrapper">
-              <input
-                id="passwordConfirm"
-                type={showPasswordConfirm ? "text" : "password"}
-                autoComplete="new-password"
-                required
-                value={form.passwordConfirm}
-                onChange={(e) =>
-                  setForm({ ...form, passwordConfirm: e.target.value })
-                }
-                placeholder="パスワードを再入力"
-              />
-              <button
-                type="button"
-                className="password-toggle"
-                onClick={() => setShowPasswordConfirm((prev) => !prev)}
-                aria-label={
-                  showPasswordConfirm
-                    ? "パスワードを隠す"
-                    : "パスワードを表示する"
-                }
-              >
-                {showPasswordConfirm ? (
-                  <svg
-                    width="18"
-                    height="18"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    aria-hidden="true"
-                  >
-                    <path
-                      d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19M1 1l22 22"
-                      stroke="currentColor"
-                      strokeWidth="1.8"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                    <circle
-                      cx="12"
-                      cy="12"
-                      r="3"
-                      stroke="currentColor"
-                      strokeWidth="1.8"
-                    />
-                  </svg>
-                ) : (
-                  <svg
-                    width="18"
-                    height="18"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    aria-hidden="true"
-                  >
-                    <path
-                      d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"
-                      stroke="currentColor"
-                      strokeWidth="1.8"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                    <circle
-                      cx="12"
-                      cy="12"
-                      r="3"
-                      stroke="currentColor"
-                      strokeWidth="1.8"
-                    />
-                  </svg>
-                )}
-              </button>
-            </div>
-          </div>
+          <PasswordInput
+            id="passwordConfirm"
+            label="パスワード（確認）"
+            value={form.passwordConfirm}
+            onChange={(e) =>
+              setForm({ ...form, passwordConfirm: e.target.value })
+            }
+            placeholder="パスワードを再入力"
+            autoComplete="new-password"
+            required
+          />
 
-          {error && (
-            <p className="register-error" role="alert">
-              {error}
-            </p>
-          )}
+          {error && <ErrorMessage message={error} />}
 
           <button type="submit" className="register-button" disabled={loading}>
             {loading ? "作成中..." : "アカウントを作成"}

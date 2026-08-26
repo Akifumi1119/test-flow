@@ -7,6 +7,8 @@ import {
   useState,
 } from "react";
 import { useNavigate } from "react-router-dom";
+import { ErrorMessage } from "../components/ErrorMessage";
+import { LoadingOverlay } from "../components/Spinner";
 import "./DashboardPage.css";
 
 interface Project {
@@ -41,6 +43,7 @@ export function DashboardPage() {
     navigate("/login");
   }, [navigate]);
 
+  // プロジェクト一覧を取得
   const fetchProjects = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -66,6 +69,7 @@ export function DashboardPage() {
     }
   }, [handleUnauthorized]);
 
+  // タブの名前
   useEffect(() => {
     document.title = "トップページ - TaskFlow";
   }, []);
@@ -77,6 +81,7 @@ export function DashboardPage() {
     fetchProjects();
   }, [fetchProjects]);
 
+  // プロジェクト作成
   const handleCreate = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!projectName.trim()) return;
@@ -120,11 +125,7 @@ export function DashboardPage() {
 
   return (
     <div className="dashboard">
-      {(loading || creating) && (
-        <div className="dashboard-overlay" aria-hidden="true">
-          <div className="dashboard-spinner" />
-        </div>
-      )}
+      {(loading || creating) && <LoadingOverlay />}
 
       <div className="dashboard-header">
         <h1 className="dashboard-title">所属プロジェクト一覧</h1>
@@ -151,15 +152,11 @@ export function DashboardPage() {
         </button>
       </div>
 
-      {error && (
-        <p className="dashboard-error" role="alert">
-          {error}
-        </p>
-      )}
+      {error && <ErrorMessage message={error} className="dashboard-error" />}
 
       {!loading && !error && projects.length === 0 && (
         <p className="dashboard-empty">
-          プロジェクトがまだありません。新規作成してください。
+          プロジェクトがまだありません。他プロジェクトに追加いただくか、新規作成してください。
         </p>
       )}
 
@@ -226,9 +223,7 @@ export function DashboardPage() {
                 />
               </div>
               {createError && (
-                <p className="modal-error" role="alert">
-                  {createError}
-                </p>
+                <ErrorMessage message={createError} className="modal-error" />
               )}
               <div className="modal-actions">
                 <button

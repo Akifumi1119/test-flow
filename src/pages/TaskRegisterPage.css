@@ -88,16 +88,6 @@
   }
 }
 
-.task-register-error {
-  font-size: 14px;
-  color: #dc2626;
-  background: rgba(220, 38, 38, 0.08);
-  border: 1px solid rgba(220, 38, 38, 0.3);
-  border-radius: 6px;
-  padding: 10px 12px;
-  margin: 0;
-}
-
 .task-register-actions {
   display: flex;
   justify-content: center;

@@ -2,6 +2,7 @@ import { API_BASE } from "../utils/api";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { ErrorMessage } from "../components/ErrorMessage";
 import "./TaskRegisterPage.css";
 
 interface Member {
@@ -33,6 +34,7 @@ export function TaskRegisterPage() {
     navigate("/login");
   }, [navigate]);
 
+  // 所属メンバー取得(担当者プルダウン用)
   const fetchMembers = useCallback(async () => {
     setMembersLoading(true);
     try {
@@ -56,6 +58,7 @@ export function TaskRegisterPage() {
     }
   }, [projectId, handleUnauthorized]);
 
+  // タブの名前
   useEffect(() => {
     document.title = "タスク登録 - TaskFlow";
   }, []);
@@ -67,10 +70,12 @@ export function TaskRegisterPage() {
     fetchMembers();
   }, [fetchMembers]);
 
+  // タスク一覧画面に遷移
   const handleCancel = () => {
     navigate(`/tasks?project_id=${projectId}&user_id=${userId}`);
   };
 
+  // タスク登録
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setSubmitting(true);
@@ -105,7 +110,7 @@ export function TaskRegisterPage() {
         setError(data.message ?? "タスクの登録に失敗しました");
         return;
       }
-
+      // 登録成功後タスク一覧画面に遷移
       navigate(`/tasks?project_id=${projectId}&user_id=${userId}`);
     } catch {
       setError("サーバーに接続できませんでした");
@@ -152,11 +157,7 @@ export function TaskRegisterPage() {
           ))}
         </select>
 
-        {error && (
-          <p className="task-register-error" role="alert">
-            {error}
-          </p>
-        )}
+        {error && <ErrorMessage message={error} />}
 
         <div className="task-register-actions">
           <button

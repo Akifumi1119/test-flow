@@ -1,1 +1,2 @@
-export const API_BASE = import.meta.env.VITE_API_BASE_URL ?? ''
+// 動的にURLを変更
+export const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "";

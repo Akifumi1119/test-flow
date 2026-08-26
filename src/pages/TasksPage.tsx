@@ -2,6 +2,8 @@ import { API_BASE } from "../utils/api";
 import { type FormEvent, useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { formatDate } from "../utils/formatDate";
+import { ErrorMessage } from "../components/ErrorMessage";
+import { LoadingOverlay } from "../components/Spinner";
 import "./TasksPage.css";
 
 interface Task {
@@ -92,6 +94,7 @@ export function TasksPage() {
   const [confirmDeleteTask, setConfirmDeleteTask] = useState(false);
   const [deletingTask, setDeletingTask] = useState(false);
 
+  // タスク詳細取得
   const fetchTaskDetail = async (taskId: number) => {
     setDetailLoading(true);
     setDetailError(null);
@@ -118,12 +121,14 @@ export function TasksPage() {
     }
   };
 
+  // 詳細モーダル展開
   const openDetailModal = async (task: Task) => {
     setDetailModalOpen(true);
     setTaskDetail(null);
     await Promise.all([fetchTaskDetail(task.task_id), fetchMembers()]);
   };
 
+  // タスク詳細修正
   const handleSaveContent = async (taskDetail: TaskDetail) => {
     setSavingContent(true);
     setSaveContentError(null);
@@ -151,6 +156,7 @@ export function TasksPage() {
       }
       setIsEditingContent(false);
       setEditContent("");
+      // タスク詳細を再取得
       await Promise.all([fetchTaskDetail(taskDetail.task_id), fetchTasks()]);
     } catch {
       setSaveContentError("サーバーに接続できませんでした");
@@ -159,6 +165,7 @@ export function TasksPage() {
     }
   };
 
+  // コメントの更新
   const handleUpdateComment = async () => {
     if (!taskDetail || editingCommentId === null || !editCommentText.trim())
       return;
@@ -185,6 +192,7 @@ export function TasksPage() {
       }
       setEditingCommentId(null);
       setEditCommentText("");
+      // コメントを再取得するためにタスク詳細を再取得
       await fetchTaskDetail(taskDetail.task_id);
     } catch {
       setUpdateCommentError("サーバーに接続できませんでした");
@@ -193,6 +201,7 @@ export function TasksPage() {
     }
   };
 
+  // コメント削除
   const handleDeleteComment = async (commentId: number) => {
     if (!taskDetail) return;
     setDeletingCommentId(commentId);
@@ -216,6 +225,7 @@ export function TasksPage() {
       }
       setConfirmDeleteCommentId(null);
       addToast("コメントを削除しました");
+      // コメントを再取得するためにタスク詳細を再取得
       await fetchTaskDetail(taskDetail.task_id);
     } catch {
       addToast("サーバーに接続できませんでした");
@@ -224,6 +234,7 @@ export function TasksPage() {
     }
   };
 
+  // タスク削除
   const handleDeleteTask = async () => {
     if (!taskDetail) return;
     setDeletingTask(true);
@@ -247,6 +258,7 @@ export function TasksPage() {
       }
       closeDetailModal();
       addToast("タスクを削除しました");
+      // タスク一覧を再取得
       await fetchTasks();
     } catch {
       addToast("サーバーに接続できませんでした");
@@ -255,20 +267,24 @@ export function TasksPage() {
     }
   };
 
+  // コメント登録
   const handleSubmitComment = async () => {
     if (!taskDetail || !commentInput.trim()) return;
     setSubmittingComment(true);
     setCommentError(null);
     try {
-      const res = await fetch(`${API_BASE}/api/comments/${taskDetail.task_id}`, {
-        method: "POST",
-        headers: buildAuthHeaders(),
-        body: JSON.stringify({
-          user_id: Number(userId),
-          task_id: taskDetail.task_id,
-          comment: commentInput,
-        }),
-      });
+      const res = await fetch(
+        `${API_BASE}/api/comments/${taskDetail.task_id}`,
+        {
+          method: "POST",
+          headers: buildAuthHeaders(),
+          body: JSON.stringify({
+            user_id: Number(userId),
+            task_id: taskDetail.task_id,
+            comment: commentInput,
+          }),
+        },
+      );
       if (res.status === 401) {
         handleUnauthorized();
         return;
@@ -279,6 +295,7 @@ export function TasksPage() {
         return;
       }
       setCommentInput("");
+      // コメントを再取得するためにタスク詳細を再取得
       await fetchTaskDetail(taskDetail.task_id);
     } catch {
       setCommentError("サーバーに接続できませんでした");
@@ -287,6 +304,7 @@ export function TasksPage() {
     }
   };
 
+  // フラグ情報等をリセットし、モーダルを閉じる
   const closeDetailModal = () => {
     setDetailModalOpen(false);
     setTaskDetail(null);
@@ -352,14 +370,18 @@ export function TasksPage() {
     navigate("/login");
   };
 
+  // タスク一覧を取得
   const fetchTasks = async () => {
     setLoading(true);
     setFetchError(null);
     try {
-      const res = await fetch(`${API_BASE}/api/tasks?project_id=${Number(projectId)}`, {
-        method: "GET",
-        headers: buildAuthHeaders(),
-      });
+      const res = await fetch(
+        `${API_BASE}/api/tasks?project_id=${Number(projectId)}`,
+        {
+          method: "GET",
+          headers: buildAuthHeaders(),
+        },
+      );
       if (res.status === 401) {
         handleUnauthorized();
         return;
@@ -377,6 +399,7 @@ export function TasksPage() {
     }
   };
 
+  // プロジェクトが責任者かチェック
   const fetchAuthority = async () => {
     try {
       const res = await fetch(
@@ -400,6 +423,7 @@ export function TasksPage() {
     }
   };
 
+  // タブの名前
   useEffect(() => {
     document.title = "タスク一覧 - TaskFlow";
   }, []);
@@ -413,6 +437,7 @@ export function TasksPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // 所属メンバー取得(プロジェクトの設定モーダル用)
   const fetchMembers = async () => {
     setMembersLoading(true);
     try {
@@ -436,11 +461,13 @@ export function TasksPage() {
     }
   };
 
+  // プロジェクト設定モーダル展開
   const openModal = () => {
     setModalOpen(true);
     fetchMembers();
   };
 
+  // フラグ情報などをリセットし、プロジェクト設定モーダルを閉じる
   const closeModal = (force = false) => {
     if (!force && (applying || deleting)) return;
     setModalOpen(false);
@@ -453,6 +480,7 @@ export function TasksPage() {
     setDeleteError(null);
   };
 
+  // ユーザーの存在確認
   const checkAndAddMember = async (email: string) => {
     if (!email) return;
     if (pendingMembers.includes(email)) {
@@ -477,7 +505,7 @@ export function TasksPage() {
         addToast("このユーザーはすでにプロジェクトに所属済みです");
         return;
       }
-      // data.exists === 1: 存在する → チップ追加
+      // data.exists === 1の場合、存在する → チップ追加
       setPendingMembers((prev) => [...prev, email]);
       setMemberInput("");
     } catch {
@@ -487,20 +515,22 @@ export function TasksPage() {
     }
   };
 
+  // メンバーの追加にてEnterキーで該当ユーザーの存在確認を発火
   const handleMemberKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key !== "Enter") return;
     e.preventDefault();
     checkAndAddMember(memberInput.trim());
   };
-
+  // メンバーの追加にてフォーカスアウトで該当ユーザーの存在確認を発火
   const handleMemberBlur = () => {
     checkAndAddMember(memberInput.trim());
   };
-
+  // 追加メンバーのチップを削除
   const removeMember = (email: string) => {
     setPendingMembers((prev) => prev.filter((m) => m !== email));
   };
 
+  // プロジェクトの設定更新
   const handleApply = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setApplying(true);
@@ -525,6 +555,7 @@ export function TasksPage() {
         setApplyError(data.message ?? "設定の適用に失敗しました");
         return;
       }
+      // 権限情報を再取得
       await fetchAuthority();
       closeModal(true);
     } catch {
@@ -534,6 +565,7 @@ export function TasksPage() {
     }
   };
 
+  // プロジェクト削除
   const handleDelete = async () => {
     setDeleting(true);
     setDeleteError(null);
@@ -553,6 +585,7 @@ export function TasksPage() {
         setDeleteError(data.message ?? "プロジェクトの削除に失敗しました");
         return;
       }
+      // プロジェクト一覧に遷移
       navigate("/");
     } catch {
       setDeleteError("サーバーに接続できませんでした");
@@ -563,11 +596,7 @@ export function TasksPage() {
 
   return (
     <div className="tasks">
-      {(applying || loading) && (
-        <div className="tasks-overlay" aria-hidden="true">
-          <div className="tasks-spinner" />
-        </div>
-      )}
+      {(applying || loading) && <LoadingOverlay />}
 
       <div className="tasks-header">
         <button
@@ -655,9 +684,7 @@ export function TasksPage() {
       </div>
 
       {fetchError && (
-        <p className="tasks-fetch-error" role="alert">
-          {fetchError}
-        </p>
+        <ErrorMessage message={fetchError} className="tasks-fetch-error" />
       )}
 
       {!loading && !fetchError && tasks.length === 0 && (
@@ -818,9 +845,10 @@ export function TasksPage() {
                       本当に削除しますか？この操作は取り消せません。
                     </p>
                     {deleteError && (
-                      <p className="tasks-modal-error" role="alert">
-                        {deleteError}
-                      </p>
+                      <ErrorMessage
+                        message={deleteError}
+                        className="tasks-modal-error"
+                      />
                     )}
                     <div className="tasks-delete-confirm-actions">
                       <button
@@ -848,9 +876,10 @@ export function TasksPage() {
               </section>
 
               {applyError && (
-                <p className="tasks-modal-error" role="alert">
-                  {applyError}
-                </p>
+                <ErrorMessage
+                  message={applyError}
+                  className="tasks-modal-error"
+                />
               )}
 
               <div className="tasks-modal-actions">
@@ -894,9 +923,10 @@ export function TasksPage() {
               <p className="tasks-detail-loading">読み込み中...</p>
             )}
             {detailError && (
-              <p className="tasks-modal-error" role="alert">
-                {detailError}
-              </p>
+              <ErrorMessage
+                message={detailError}
+                className="tasks-modal-error"
+              />
             )}
 
             {taskDetail && (
@@ -1041,9 +1071,10 @@ export function TasksPage() {
                       disabled={savingContent}
                     />
                     {saveContentError && (
-                      <p className="tasks-modal-error" role="alert">
-                        {saveContentError}
-                      </p>
+                      <ErrorMessage
+                        message={saveContentError}
+                        className="tasks-modal-error"
+                      />
                     )}
                   </>
                 ) : (
@@ -1083,9 +1114,10 @@ export function TasksPage() {
                                   disabled={updatingComment}
                                 />
                                 {updateCommentError && (
-                                  <p className="tasks-modal-error" role="alert">
-                                    {updateCommentError}
-                                  </p>
+                                  <ErrorMessage
+                                    message={updateCommentError}
+                                    className="tasks-modal-error"
+                                  />
                                 )}
                                 <div className="tasks-detail-comment-edit-actions">
                                   <button
@@ -1188,9 +1220,10 @@ export function TasksPage() {
                 />
 
                 {commentError && (
-                  <p className="tasks-modal-error" role="alert">
-                    {commentError}
-                  </p>
+                  <ErrorMessage
+                    message={commentError}
+                    className="tasks-modal-error"
+                  />
                 )}
 
                 <div className="tasks-detail-submit-row">
