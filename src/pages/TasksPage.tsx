@@ -1,3 +1,9 @@
+// タスク一覧ページ。
+// URL パラメータ（project_id・user_id）で対象プロジェクトを特定し、
+// そのプロジェクトのタスク一覧を表示する。
+// タイトル検索・ステータス・担当者・作成者によるクライアントサイド絞り込みに対応する。
+// タスクをクリックすると詳細モーダルが開き、内容の編集・コメント投稿・タスク削除ができる。
+// 管理者（authority === 3）はプロジェクト設定モーダルからメンバー追加・名前変更・責任者変更・プロジェクト削除が行える。
 import { API_BASE } from "../utils/api";
 import { type FormEvent, useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -62,6 +68,20 @@ export function TasksPage() {
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
 
+  // フィルター state。値が空文字のときはその項目の絞り込みを行わない。
+  // filterTitle: タイトル部分一致検索（クライアントサイド）
+  // filterStatus: ステータス絞り込み（1=未着手 2=進行中 3=完了）
+  // filterAssignee: 担当者名で絞り込み。UNASSIGNED 定数を指定すると未割り当てタスクのみ表示
+  // filterCreator: 作成者名で絞り込み
+  const [filterTitle, setFilterTitle] = useState("");
+  const [filterStatus, setFilterStatus] = useState("");
+  const [filterAssignee, setFilterAssignee] = useState("");
+  const [filterCreator, setFilterCreator] = useState("");
+  // showSuggestions: タイトル検索のサジェストドロップダウンの表示状態
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  // searchWrapRef: サジェストドロップダウン外クリック検知のための参照
+  const searchWrapRef = useRef<HTMLDivElement>(null);
+
   const [authority, setAuthority] = useState<number>(1);
 
   const [modalOpen, setModalOpen] = useState(false);
@@ -94,7 +114,9 @@ export function TasksPage() {
   const [confirmDeleteTask, setConfirmDeleteTask] = useState(false);
   const [deletingTask, setDeletingTask] = useState(false);
 
-  // タスク詳細取得
+  // タスク詳細取得。
+  // GET /api/tasks/:taskId でタスクの詳細情報（内容・コメント一覧等）を取得する。
+  // 詳細モーダルを開くときと、タスク編集・コメント操作後の再取得に使用する。
   const fetchTaskDetail = async (taskId: number) => {
     setDetailLoading(true);
     setDetailError(null);
@@ -121,14 +143,18 @@ export function TasksPage() {
     }
   };
 
-  // 詳細モーダル展開
+  // タスク詳細モーダルを開く。
+  // タスク詳細取得とメンバー一覧取得を並行実行することで表示を高速化する。
+  // メンバー一覧は担当者変更のプルダウンに使用する。
   const openDetailModal = async (task: Task) => {
     setDetailModalOpen(true);
     setTaskDetail(null);
     await Promise.all([fetchTaskDetail(task.task_id), fetchMembers()]);
   };
 
-  // タスク詳細修正
+  // タスク内容の更新処理。
+  // PUT /api/tasks/:taskId に説明・ステータス・担当者IDを送信して更新する。
+  // 更新成功後はタスク詳細と一覧を並行再取得することで画面を最新状態に保つ。
   const handleSaveContent = async (taskDetail: TaskDetail) => {
     setSavingContent(true);
     setSaveContentError(null);
@@ -165,7 +191,10 @@ export function TasksPage() {
     }
   };
 
-  // コメントの更新
+  // コメント更新処理。
+  // PUT /api/comments/:commentId に編集後のコメントテキストを送信する。
+  // 更新成功後はタスク詳細を再取得してコメント一覧を最新化する。
+  // 自分のコメントのみ編集できる（UI 側で created_by_id と現在のユーザーIDを比較して表示制御）。
   const handleUpdateComment = async () => {
     if (!taskDetail || editingCommentId === null || !editCommentText.trim())
       return;
@@ -201,7 +230,10 @@ export function TasksPage() {
     }
   };
 
-  // コメント削除
+  // コメント削除処理。
+  // DELETE /api/comments/:commentId を呼び出してコメントを削除する。
+  // 削除成功後はトースト通知を表示してタスク詳細を再取得する。
+  // エラー時もトーストで通知する（モーダルを閉じずにインライン表示しないため）。
   const handleDeleteComment = async (commentId: number) => {
     if (!taskDetail) return;
     setDeletingCommentId(commentId);
@@ -234,7 +266,9 @@ export function TasksPage() {
     }
   };
 
-  // タスク削除
+  // タスク削除処理。
+  // DELETE /api/tasks/:taskId を呼び出してタスクを削除する。
+  // 削除成功後は詳細モーダルを閉じ、トースト通知を表示してタスク一覧を再取得する。
   const handleDeleteTask = async () => {
     if (!taskDetail) return;
     setDeletingTask(true);
@@ -267,7 +301,9 @@ export function TasksPage() {
     }
   };
 
-  // コメント登録
+  // コメント投稿処理。
+  // POST /api/comments/:taskId にコメントテキストを送信する。
+  // 投稿成功後は入力欄をクリアしてタスク詳細を再取得することでコメント一覧を更新する。
   const handleSubmitComment = async () => {
     if (!taskDetail || !commentInput.trim()) return;
     setSubmittingComment(true);
@@ -304,7 +340,8 @@ export function TasksPage() {
     }
   };
 
-  // フラグ情報等をリセットし、モーダルを閉じる
+  // タスク詳細モーダルを閉じ、モーダル内で使用するすべての state をリセットする。
+  // 編集中の内容・コメント・確認ダイアログなどが残らないようにすべての関連 state を初期値に戻す。
   const closeDetailModal = () => {
     setDetailModalOpen(false);
     setTaskDetail(null);
@@ -328,7 +365,9 @@ export function TasksPage() {
     setSaveContentError(null);
   };
 
-  // トースト
+  // 画面下部に一時的なトースト通知を表示する仕組み。
+  // addToast でメッセージを追加し、3秒後に自動で消える。
+  // 複数のトーストを同時表示できるよう ID で管理する。
   const [toasts, setToasts] = useState<{ id: number; message: string }[]>([]);
   const toastIdRef = useRef(0);
   const addToast = (message: string) => {
@@ -343,7 +382,7 @@ export function TasksPage() {
   // メンバー追加
   const [memberInput, setMemberInput] = useState("");
   const [memberChecking, setMemberChecking] = useState(false);
-  const [pendingMembers, setPendingMembers] = useState<string[]>([]);
+  const [pendingMembers, setPendingMembers] = useState<{ email: string; name: string }[]>([]);
 
   // プロジェクト名編集
   const [editProjectName, setEditProjectName] = useState("");
@@ -362,6 +401,8 @@ export function TasksPage() {
   const [members, setMembers] = useState<Member[]>([]);
   const [membersLoading, setMembersLoading] = useState(false);
 
+  // 認証エラー（401）発生時の共通処理。
+  // localStorage のトークンをすべて削除してログインページへリダイレクトする。
   const handleUnauthorized = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("refresh_token");
@@ -370,7 +411,10 @@ export function TasksPage() {
     navigate("/login");
   };
 
-  // タスク一覧を取得
+  // タスク一覧を取得する。
+  // GET /api/tasks?project_id=... でプロジェクトの全タスクを取得する。
+  // 絞り込みはクライアントサイドで行うため、API には常に全件リクエストを送る。
+  // 取得したタスクから担当者名・作成者名を抽出してフィルタードロップダウンの選択肢を生成する。
   const fetchTasks = async () => {
     setLoading(true);
     setFetchError(null);
@@ -399,7 +443,10 @@ export function TasksPage() {
     }
   };
 
-  // プロジェクトが責任者かチェック
+  // ログインユーザーのプロジェクト権限を取得する。
+  // GET /api/projects/:projectId/authority?user_id=... で権限値（1=メンバー 2=編集者 3=管理者）を取得する。
+  // authority === 3（管理者）の場合のみ「プロジェクトの設定」ボタンを表示する。
+  // 取得失敗時はデフォルトの 1（メンバー）として扱い、設定ボタンを非表示にする。
   const fetchAuthority = async () => {
     try {
       const res = await fetch(
@@ -423,10 +470,61 @@ export function TasksPage() {
     }
   };
 
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (searchWrapRef.current && !searchWrapRef.current.contains(e.target as Node)) {
+        setShowSuggestions(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   // タブの名前
   useEffect(() => {
     document.title = "タスク一覧 - TaskFlow";
   }, []);
+
+  // すべてのフィルターをリセットしてタスク一覧全件を表示する。
+  const clearFilters = () => {
+    setFilterTitle("");
+    setFilterStatus("");
+    setFilterAssignee("");
+    setFilterCreator("");
+  };
+
+  // 未割り当てタスクを担当者フィルターで選択するためのセンチネル値。
+  // 空文字は「すべて（フィルターなし）」と区別するために専用の定数を使用する。
+  const UNASSIGNED = "__unassigned__";
+
+  // フィルター条件を tasks 配列に適用して表示対象のタスクを絞り込む派生データ。
+  // API を呼び出さずクライアントサイドで処理するため、フィルター変更時も高速に反映される。
+  const filteredTasks = tasks.filter((task) => {
+    if (filterTitle && !task.title.toLowerCase().includes(filterTitle.toLowerCase())) return false;
+    if (filterStatus && task.status !== Number(filterStatus)) return false;
+    if (filterAssignee) {
+      if (filterAssignee === UNASSIGNED) {
+        if (task.user_name) return false;
+      } else {
+        if (task.user_name !== filterAssignee) return false;
+      }
+    }
+    if (filterCreator && task.created_by !== filterCreator) return false;
+    return true;
+  });
+
+  // 未割り当てタスクが存在するかどうか。true の場合にのみ担当者フィルターに「未割り当て」選択肢を表示する。
+  const hasUnassigned = tasks.some((t) => !t.user_name);
+  // タスク一覧から重複を除いた担当者名の配列。フィルタードロップダウンの選択肢として使用する。
+  const assigneeOptions = [...new Set(tasks.map((t) => t.user_name).filter(Boolean))];
+  // タスク一覧から重複を除いた作成者名の配列。フィルタードロップダウンの選択肢として使用する。
+  const creatorOptions = [...new Set(tasks.map((t) => t.created_by).filter(Boolean))];
+  // タイトル検索入力値に部分一致するタスクタイトルの候補一覧。インクリメンタルサーチのサジェストに使用する。
+  const titleSuggestions = filterTitle
+    ? [...new Set(tasks.map((t) => t.title).filter((title) =>
+        title.toLowerCase().includes(filterTitle.toLowerCase())
+      ))]
+    : [];
 
   const initialized = useRef(false);
   useEffect(() => {
@@ -437,7 +535,10 @@ export function TasksPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // 所属メンバー取得(プロジェクトの設定モーダル用)
+  // プロジェクトメンバー一覧を取得する。
+  // GET /api/projects/:projectId/members を呼び出す。
+  // タスク詳細モーダルの担当者変更プルダウンと、プロジェクト設定モーダルの責任者変更プルダウンで共用する。
+  // 詳細モーダルを開くときと、プロジェクト設定モーダルを開くときに呼び出す。
   const fetchMembers = async () => {
     setMembersLoading(true);
     try {
@@ -461,13 +562,15 @@ export function TasksPage() {
     }
   };
 
-  // プロジェクト設定モーダル展開
+  // プロジェクト設定モーダルを開く。同時にメンバー一覧を取得して責任者変更のプルダウンを準備する。
   const openModal = () => {
     setModalOpen(true);
     fetchMembers();
   };
 
-  // フラグ情報などをリセットし、プロジェクト設定モーダルを閉じる
+  // プロジェクト設定モーダルを閉じ、入力内容をリセットする。
+  // force=true のとき API 送信中でも強制的に閉じる（設定適用成功後など）。
+  // force=false のとき applying または deleting 中は閉じない。
   const closeModal = (force = false) => {
     if (!force && (applying || deleting)) return;
     setModalOpen(false);
@@ -480,10 +583,16 @@ export function TasksPage() {
     setDeleteError(null);
   };
 
-  // ユーザーの存在確認
+  // メンバー追加前のユーザー存在確認。
+  // GET /api/users/check?email=...&project_id=... でメールアドレスの登録状況を確認する。
+  // exists の値によって次の動作が変わる:
+  //   1 = 存在するユーザー → pendingMembers に追加してチップ表示
+  //   2 = 未登録ユーザー → トーストでエラー表示
+  //   3 = すでにプロジェクトに所属 → トーストでエラー表示
+  // pendingMembers はフォーム送信時に一括でメンバー追加リクエストを送るための一時リスト。
   const checkAndAddMember = async (email: string) => {
     if (!email) return;
-    if (pendingMembers.includes(email)) {
+    if (pendingMembers.some((m) => m.email === email)) {
       addToast("このユーザーはすでに追加済みです");
       return;
     }
@@ -505,8 +614,8 @@ export function TasksPage() {
         addToast("このユーザーはすでにプロジェクトに所属済みです");
         return;
       }
-      // data.exists === 1の場合、存在する → チップ追加
-      setPendingMembers((prev) => [...prev, email]);
+      // data.exists === 1の場合、存在する → チップ追加。チップ表示は name、API 送信は email を使う
+      setPendingMembers((prev) => [...prev, { email, name: data.name }]);
       setMemberInput("");
     } catch {
       addToast("ユーザーの確認に失敗しました");
@@ -527,10 +636,13 @@ export function TasksPage() {
   };
   // 追加メンバーのチップを削除
   const removeMember = (email: string) => {
-    setPendingMembers((prev) => prev.filter((m) => m !== email));
+    setPendingMembers((prev) => prev.filter((m) => m.email !== email));
   };
 
-  // プロジェクトの設定更新
+  // プロジェクト設定更新処理。
+  // PUT /api/projects にメンバー追加・プロジェクト名変更・責任者変更をまとめて送信する。
+  // 入力された項目のみが反映され、未入力項目は変更されない（サーバー側の仕様）。
+  // 成功後は権限情報を再取得して責任者変更が自分に影響する場合に設定ボタンを非表示にする。
   const handleApply = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setApplying(true);
@@ -543,7 +655,7 @@ export function TasksPage() {
           project_id: Number(projectId),
           manager: Number(ownerUserId),
           rename_project: editProjectName,
-          members: pendingMembers,
+          members: pendingMembers.map((m) => m.email),
         }),
       });
       if (res.status === 401) {
@@ -565,7 +677,10 @@ export function TasksPage() {
     }
   };
 
-  // プロジェクト削除
+  // プロジェクト削除処理。
+  // DELETE /api/projects/:projectId を呼び出してプロジェクトを削除する。
+  // 削除成功後はダッシュボード（/）へ遷移する。
+  // 管理者（authority === 3）のみ実行できる（UI 側でプロジェクト設定モーダルへのアクセスを制限）。
   const handleDelete = async () => {
     setDeleting(true);
     setDeleteError(null);
@@ -687,11 +802,107 @@ export function TasksPage() {
         <ErrorMessage message={fetchError} className="tasks-fetch-error" />
       )}
 
-      {!loading && !fetchError && tasks.length === 0 && (
-        <p className="tasks-empty">タスクがまだありません。</p>
+      {!fetchError && (
+        <div className="tasks-filter-bar">
+          <div className="tasks-filter-search-wrap" ref={searchWrapRef}>
+            <svg
+              className="tasks-filter-search-icon"
+              width="14"
+              height="14"
+              viewBox="0 0 16 16"
+              fill="none"
+              aria-hidden="true"
+            >
+              <circle cx="6.5" cy="6.5" r="4.5" stroke="currentColor" strokeWidth="1.5" />
+              <path d="M10 10l3.5 3.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+            </svg>
+            <input
+              type="search"
+              className="tasks-filter-search"
+              value={filterTitle}
+              onChange={(e) => {
+                setFilterTitle(e.target.value);
+                setShowSuggestions(true);
+              }}
+              onFocus={() => setShowSuggestions(true)}
+              placeholder="タイトルで検索"
+              disabled={loading}
+              aria-label="タイトルで検索"
+              aria-autocomplete="list"
+              autoComplete="off"
+            />
+            {showSuggestions && titleSuggestions.length > 0 && (
+              <ul className="tasks-filter-suggestions" role="listbox">
+                {titleSuggestions.map((title) => (
+                  <li
+                    key={title}
+                    className="tasks-filter-suggestion-item"
+                    role="option"
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      setFilterTitle(title);
+                      setShowSuggestions(false);
+                    }}
+                  >
+                    {title}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+          <select
+            className="tasks-filter-select"
+            value={filterStatus}
+            onChange={(e) => setFilterStatus(e.target.value)}
+            disabled={loading}
+          >
+            <option value="">ステータス: すべて</option>
+            {Object.entries(STATUS_LABEL).map(([val, label]) => (
+              <option key={val} value={val}>{label}</option>
+            ))}
+          </select>
+          <select
+            className="tasks-filter-select"
+            value={filterAssignee}
+            onChange={(e) => setFilterAssignee(e.target.value)}
+            disabled={loading}
+          >
+            <option value="">担当者: すべて</option>
+            {hasUnassigned && (
+              <option value={UNASSIGNED}>未割り当て</option>
+            )}
+            {assigneeOptions.map((name) => (
+              <option key={name} value={name}>{name}</option>
+            ))}
+          </select>
+          <select
+            className="tasks-filter-select"
+            value={filterCreator}
+            onChange={(e) => setFilterCreator(e.target.value)}
+            disabled={loading}
+          >
+            <option value="">作成者: すべて</option>
+            {creatorOptions.map((name) => (
+              <option key={name} value={name}>{name}</option>
+            ))}
+          </select>
+          {(filterTitle || filterStatus || filterAssignee || filterCreator) && (
+            <button className="tasks-filter-clear" onClick={clearFilters}>
+              絞り込みを解除
+            </button>
+          )}
+        </div>
       )}
 
-      {!loading && !fetchError && tasks.length > 0 && (
+      {!loading && !fetchError && filteredTasks.length === 0 && (
+        <p className="tasks-empty">
+          {tasks.length === 0
+            ? "タスクがまだありません。"
+            : "条件に一致するタスクがありません。"}
+        </p>
+      )}
+
+      {!loading && !fetchError && filteredTasks.length > 0 && (
         <table className="tasks-table">
           <thead>
             <tr>
@@ -703,7 +914,7 @@ export function TasksPage() {
             </tr>
           </thead>
           <tbody>
-            {tasks.map((task) => (
+            {filteredTasks.map((task) => (
               <tr
                 key={task.task_id}
                 onClick={() => openDetailModal(task)}
@@ -767,14 +978,14 @@ export function TasksPage() {
                 </div>
                 {pendingMembers.length > 0 && (
                   <div className="member-tags">
-                    {pendingMembers.map((email) => (
-                      <span key={email} className="member-tag">
-                        {email}
+                    {pendingMembers.map((m) => (
+                      <span key={m.email} className="member-tag">
+                        {m.name}
                         <button
                           type="button"
                           className="member-tag-remove"
-                          onClick={() => removeMember(email)}
-                          aria-label={`${email}を削除`}
+                          onClick={() => removeMember(m.email)}
+                          aria-label={`${m.name}を削除`}
                         >
                           ×
                         </button>

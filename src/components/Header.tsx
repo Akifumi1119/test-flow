@@ -1,3 +1,8 @@
+// ヘッダーコンポーネント。
+// 全認証済みページの上部に固定表示される。
+// ユーザー名をクリックするとドロップダウンメニューが開き、
+// 「プロフィール」と「ログアウト」を選択できる。
+// プロフィールモーダルでは名前・メールアドレスの編集、プロジェクトからの退場、アカウント削除が行える。
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { API_BASE } from "../utils/api";
@@ -40,10 +45,17 @@ export function Header({ userName, onNameUpdate }: Props) {
   );
   const [leaveError, setLeaveError] = useState<string | null>(null);
 
+  const [confirmDeleteAccount, setConfirmDeleteAccount] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
   const menuRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
   const userId = localStorage.getItem("userId") ?? "";
 
+  // ドロップダウンメニューの外側クリックを検知して閉じる。
+  // menuRef の外側をクリックしたときだけ open を false にすることで、
+  // メニュー内のボタンクリックには影響しない。
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
@@ -54,8 +66,13 @@ export function Header({ userName, onNameUpdate }: Props) {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  // プロフィールモーダルが開かれたタイミングでユーザー情報を取得する。
+  // GET /api/users/:userId でプロフィール（名前・メールアドレス・所属プロジェクト）を取得し、
+  // 編集フォームの初期値としてセットする。
+  // userId が空の場合（アカウント削除後など）はフェッチしない。
+  // cancelled フラグでコンポーネントアンマウント後の state 更新を防ぐ。
   useEffect(() => {
-    if (!profileOpen) return;
+    if (!profileOpen || !userId) return;
     let cancelled = false;
     const fetchProfile = async () => {
       setProfileLoading(true);
@@ -90,12 +107,19 @@ export function Header({ userName, onNameUpdate }: Props) {
     };
   }, [profileOpen, userId]);
 
+  // プロフィールモーダルを閉じ、各エラー表示をリセットする。
   const handleCloseProfile = () => {
     setProfileOpen(false);
     setSaveError(null);
     setLeaveError(null);
+    setConfirmDeleteAccount(false);
+    setDeleteError(null);
   };
 
+  // プロフィール保存処理。
+  // PUT /api/users/:userId に名前とメールアドレスを送信して更新する。
+  // 成功後は localStorage と親コンポーネントの表示名（onNameUpdate）を即座に更新し、
+  // モーダルを閉じる。409 はメールアドレス重複のため専用メッセージを表示する。
   const handleSave = async () => {
     if (!editName.trim()) return;
     setSaving(true);
@@ -131,8 +155,15 @@ export function Header({ userName, onNameUpdate }: Props) {
     }
   };
 
+  // プロジェクト退場処理。
+  // PUT /api/users/:userId に退場するプロジェクト情報を送信する。
+  // 管理者（authority === 3）のプロジェクトは UI 側で退場ボタンを無効化しているため、
+  // この関数は管理者以外のプロジェクトに対してのみ呼ばれる。
+  // 退場成功後はモーダルを閉じる（プロフィール再取得のため次回開いたときに反映される）。
   const handleLeaveProject = async (projectId: number) => {
-    const project = userProfile?.projects.find((p) => p.project_id === projectId);
+    const project = userProfile?.projects.find(
+      (p) => p.project_id === projectId,
+    );
     if (!project) return;
     setRemovingProjectId(projectId);
     setLeaveError(null);
@@ -144,7 +175,9 @@ export function Header({ userName, onNameUpdate }: Props) {
           Authorization: `Bearer ${localStorage.getItem("token") ?? ""}`,
         },
         body: JSON.stringify({
-          projects: [{ project_id: projectId, project_name: project.project_name }],
+          projects: [
+            { project_id: projectId, project_name: project.project_name },
+          ],
         }),
       });
       if (!res.ok) {
@@ -160,6 +193,42 @@ export function Header({ userName, onNameUpdate }: Props) {
     }
   };
 
+  // アカウント削除処理。
+  // DELETE /api/users/:userId を呼び出してアカウントを削除する。
+  // 削除成功後は localStorage の認証情報をすべて削除してログインページへリダイレクトする。
+  // 管理者権限を持つプロジェクトがある場合は UI 側でボタンを無効化しているため、
+  // この関数は管理者プロジェクトがない状態でのみ呼ばれる。
+  const handleDeleteAccount = async () => {
+    setDeleting(true);
+    setDeleteError(null);
+    try {
+      const res = await fetch(`${API_BASE}/api/users/${userId}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token") ?? ""}`,
+        },
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setDeleteError(data.message ?? "アカウントの削除に失敗しました");
+        return;
+      }
+      localStorage.removeItem("token");
+      localStorage.removeItem("refresh_token");
+      localStorage.removeItem("userName");
+      localStorage.removeItem("userId");
+      navigate("/login");
+    } catch {
+      setDeleteError("サーバーに接続できませんでした");
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  // ログアウト処理。
+  // POST /api/logout でサーバー側のリフレッシュトークンを無効化してから
+  // localStorage の認証情報を削除してログインページへ遷移する。
+  // API 呼び出しが失敗した場合も finally でローカルのトークン削除とリダイレクトを必ず実行する。
   const handleLogout = async () => {
     const token = localStorage.getItem("token");
     try {
@@ -451,6 +520,56 @@ export function Header({ userName, onNameUpdate }: Props) {
                     </ul>
                   </div>
                 )}
+
+                <div className="profile-delete-section">
+                  {deleteError && (
+                    <p className="profile-save-error" role="alert">
+                      {deleteError}
+                    </p>
+                  )}
+                  {userProfile.projects.some((p) => p.authority === 3) ? (
+                    <span
+                      className="profile-tooltip-wrapper profile-delete-tooltip"
+                      data-tooltip="管理者のプロジェクトがあるためアカウントを削除できません。管理者を変更してから再度お試しください"
+                    >
+                      <button className="profile-delete-btn" disabled>
+                        アカウントを削除
+                      </button>
+                    </span>
+                  ) : confirmDeleteAccount ? (
+                    <div className="profile-delete-confirm">
+                      <p className="profile-delete-confirm-text">
+                        本当に削除しますか？この操作は取り消せません。
+                      </p>
+                      <div className="profile-delete-confirm-actions">
+                        <button
+                          className="profile-delete-confirm-cancel"
+                          onClick={() => {
+                            setConfirmDeleteAccount(false);
+                            setDeleteError(null);
+                          }}
+                          disabled={deleting}
+                        >
+                          キャンセル
+                        </button>
+                        <button
+                          className="profile-delete-btn"
+                          onClick={handleDeleteAccount}
+                          disabled={deleting}
+                        >
+                          {deleting ? "削除中..." : "削除する"}
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button
+                      className="profile-delete-btn"
+                      onClick={() => setConfirmDeleteAccount(true)}
+                    >
+                      アカウントを削除
+                    </button>
+                  )}
+                </div>
               </>
             )}
           </div>

@@ -1,3 +1,6 @@
+// パスワード入力フィールドのコンポーネント。
+// 目のアイコンボタンで平文表示／非表示を切り替えられる。
+// ログインページ・新規登録ページで共通利用する。
 import { useState } from "react";
 import "./PasswordInput.css";
 
@@ -12,6 +15,7 @@ interface PasswordInputProps {
   disabled?: boolean;
 }
 
+// パスワード非表示時に表示するアイコン（目に斜線）
 const EyeOffIcon = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
     <path
@@ -25,6 +29,7 @@ const EyeOffIcon = () => (
   </svg>
 );
 
+// パスワード表示時に表示するアイコン（目）
 const EyeIcon = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
     <path
@@ -48,6 +53,7 @@ export function PasswordInput({
   required,
   disabled,
 }: PasswordInputProps) {
+  // show: true のとき type="text" にして平文表示、false のとき type="password" でマスク表示
   const [show, setShow] = useState(false);
 
   return (
@@ -64,6 +70,7 @@ export function PasswordInput({
           required={required}
           disabled={disabled}
         />
+        {/* クリックするたびに show を反転してパスワードの表示／非表示を切り替える */}
         <button
           type="button"
           className="password-toggle"

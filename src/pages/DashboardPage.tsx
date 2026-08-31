@@ -1,3 +1,7 @@
+// ダッシュボードページ。
+// ログインユーザーが所属するプロジェクト一覧を表示する。
+// 各プロジェクトカードにはタスクの完了率をプログレスバーで可視化する。
+// 新規プロジェクトの作成もこの画面から行う。
 import { API_BASE } from "../utils/api";
 import {
   type FormEvent,
@@ -14,10 +18,12 @@ import "./DashboardPage.css";
 interface Project {
   project_id: number;
   project_name: string;
-  task_per_complete: number;
-  task_per_incomplete: number;
+  task_per_complete: number;   // タスク完了率（%）
+  task_per_incomplete: number; // タスク未完了率（%）
 }
 
+// 認証ヘッダーを生成するヘルパー。
+// すべての認証が必要な API リクエストで共通して使用する。
 function buildAuthHeaders() {
   return {
     Authorization: `Bearer ${localStorage.getItem("token") ?? ""}`,
@@ -35,6 +41,8 @@ export function DashboardPage() {
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
 
+  // 認証エラー（401）発生時の共通処理。
+  // localStorage のトークンを削除してログインページへリダイレクトする。
   const handleUnauthorized = useCallback(() => {
     localStorage.removeItem("token");
     localStorage.removeItem("refresh_token");
@@ -43,7 +51,9 @@ export function DashboardPage() {
     navigate("/login");
   }, [navigate]);
 
-  // プロジェクト一覧を取得
+  // 所属プロジェクト一覧を取得する。
+  // GET /api/projects/:userId でログインユーザーが所属する全プロジェクトを取得する。
+  // 各プロジェクトにはタスクの完了率・未完了率が含まれており、カードに表示する。
   const fetchProjects = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -69,11 +79,12 @@ export function DashboardPage() {
     }
   }, [handleUnauthorized]);
 
-  // タブの名前
   useEffect(() => {
     document.title = "トップページ - TaskFlow";
   }, []);
 
+  // React StrictMode では useEffect が2回実行されるため、
+  // initialized フラグで初回のみ fetchProjects を呼び出すようにしている。
   const initialized = useRef(false);
   useEffect(() => {
     if (initialized.current) return;
@@ -81,7 +92,9 @@ export function DashboardPage() {
     fetchProjects();
   }, [fetchProjects]);
 
-  // プロジェクト作成
+  // プロジェクト作成処理。
+  // POST /api/projects にプロジェクト名とユーザーIDを送信する。
+  // 作成成功後はモーダルを閉じてプロジェクト一覧を再取得することでリストに追加する。
   const handleCreate = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!projectName.trim()) return;
@@ -108,6 +121,7 @@ export function DashboardPage() {
       }
       setModalOpen(false);
       setProjectName("");
+      // 作成したプロジェクトを一覧に反映するために再取得する
       await fetchProjects();
     } catch {
       setCreateError("サーバーに接続できませんでした");
@@ -116,6 +130,8 @@ export function DashboardPage() {
     }
   };
 
+  // プロジェクト作成モーダルを閉じる。
+  // API 送信中（creating）はモーダルを閉じられないようにする。
   const closeModal = () => {
     if (creating) return;
     setModalOpen(false);
@@ -125,6 +141,7 @@ export function DashboardPage() {
 
   return (
     <div className="dashboard">
+      {/* API 通信中は画面全体をオーバーレイで覆い操作を無効化する */}
       {(loading || creating) && <LoadingOverlay />}
 
       <div className="dashboard-header">
@@ -154,12 +171,14 @@ export function DashboardPage() {
 
       {error && <ErrorMessage message={error} className="dashboard-error" />}
 
+      {/* プロジェクトが0件の場合は案内メッセージを表示 */}
       {!loading && !error && projects.length === 0 && (
         <p className="dashboard-empty">
           プロジェクトがまだありません。他プロジェクトに追加いただくか、新規作成してください。
         </p>
       )}
 
+      {/* プロジェクトカード一覧。クリックでタスク一覧ページへ遷移する */}
       <div className="project-grid">
         {projects.map((project) => (
           <div
@@ -178,6 +197,7 @@ export function DashboardPage() {
             }
           >
             <h2 className="project-card-name">{project.project_name}</h2>
+            {/* タスク完了率をプログレスバーで表示 */}
             <div className="project-progress-bar">
               <div
                 className="project-progress-fill"
@@ -196,6 +216,7 @@ export function DashboardPage() {
         ))}
       </div>
 
+      {/* プロジェクト作成モーダル。背景クリックで閉じる */}
       {modalOpen && (
         <div className="modal-backdrop" onClick={closeModal}>
           <div

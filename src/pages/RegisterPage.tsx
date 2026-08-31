@@ -1,3 +1,6 @@
+// 新規ユーザー登録ページ。
+// 名前・メールアドレス・パスワード（確認含む）を入力してアカウントを作成する。
+// 登録成功後はログインページへ遷移する。
 import { API_BASE } from "../utils/api";
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
@@ -9,14 +12,14 @@ interface RegisterForm {
   name: string;
   email: string;
   password: string;
-  passwordConfirm: string;
+  passwordConfirm: string; // パスワード確認用（サーバーには送らない）
 }
 
 export function RegisterPage() {
-  // タブの名前
   useEffect(() => {
     document.title = "新規登録 - TaskFlow";
   }, []);
+
   const [form, setForm] = useState<RegisterForm>({
     name: "",
     email: "",
@@ -27,11 +30,15 @@ export function RegisterPage() {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  // ユーザー登録API
+  // ユーザー登録処理。
+  // フロントエンドでパスワード一致を検証してから POST /api/users を呼び出す。
+  // 409 はメールアドレス重複のため専用メッセージを表示する。
+  // 登録成功後はログインページへ遷移する（自動ログインはしない）。
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
+    // パスワードと確認パスワードが一致するかクライアントサイドで検証
     if (form.password !== form.passwordConfirm) {
       setError("パスワードが一致しません");
       return;
@@ -47,11 +54,13 @@ export function RegisterPage() {
           name: form.name,
           email: form.email,
           password: form.password,
+          // passwordConfirm はサーバーに送らない
         }),
       });
 
       const data = await res.json();
 
+      // メールアドレス重複の場合は専用メッセージを表示
       if (res.status === 409) {
         setError("このメールアドレスはすでに登録されています");
         return;
@@ -62,6 +71,7 @@ export function RegisterPage() {
         return;
       }
 
+      // 登録成功: ログインページへ遷移（自動ログインせず手動でサインインさせる）
       navigate("/login");
     } catch {
       setError("サーバーに接続できませんでした");

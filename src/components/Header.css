@@ -447,3 +447,103 @@
     opacity: 1;
   }
 }
+
+/* アカウント削除セクション */
+
+.profile-delete-section {
+  margin-top: 24px;
+  border-top: 1px solid var(--border);
+  padding-top: 20px;
+}
+
+.profile-delete-tooltip {
+  width: 100%;
+
+  &::after {
+    right: auto;
+    left: 0;
+    width: 260px;
+  }
+}
+
+.profile-delete-btn {
+  width: 100%;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  padding: 9px 0;
+  border-radius: 6px;
+  border: 1px solid #dc2626;
+  background: transparent;
+  color: #dc2626;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s, opacity 0.2s;
+
+  &:hover:not(:disabled) {
+    background: #dc2626;
+    color: #fff;
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  &:focus-visible {
+    outline: 2px solid #dc2626;
+    outline-offset: 2px;
+  }
+}
+
+/* アカウント削除確認UI */
+
+.profile-delete-confirm {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.profile-delete-confirm-text {
+  font-size: 13px;
+  color: #dc2626;
+  text-align: left;
+  margin: 0;
+  line-height: 1.6;
+}
+
+.profile-delete-confirm-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.profile-delete-confirm-cancel {
+  flex: 1;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  padding: 9px 0;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-h);
+  cursor: pointer;
+  transition: background 0.2s, opacity 0.2s;
+
+  &:hover:not(:disabled) {
+    background: var(--code-bg);
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+}
+
+.profile-delete-confirm-actions .profile-delete-btn {
+  flex: 1;
+}

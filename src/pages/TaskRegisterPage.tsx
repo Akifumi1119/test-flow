@@ -1,3 +1,7 @@
+// タスク登録ページ。
+// URL パラメータ（project_id・user_id）で対象プロジェクトを特定し、
+// タイトル・説明・担当者を入力して新しいタスクを作成する。
+// 登録完了後はタスク一覧ページへ戻る。
 import { API_BASE } from "../utils/api";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
@@ -14,18 +18,21 @@ export function TaskRegisterPage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
 
+  // URL クエリパラメータからプロジェクトIDとユーザーIDを取得する
   const projectId = searchParams.get("project_id") ?? "";
   const userId = searchParams.get("user_id") ?? "";
 
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
-  const [assigneeId, setAssigneeId] = useState("");
+  const [assigneeId, setAssigneeId] = useState(""); // 担当者のユーザーID（未選択時は空文字）
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const [members, setMembers] = useState<Member[]>([]);
   const [membersLoading, setMembersLoading] = useState(true);
 
+  // 認証エラー（401）発生時の共通処理。
+  // localStorage のトークンを削除してログインページへリダイレクトする。
   const handleUnauthorized = useCallback(() => {
     localStorage.removeItem("token");
     localStorage.removeItem("refresh_token");
@@ -34,7 +41,9 @@ export function TaskRegisterPage() {
     navigate("/login");
   }, [navigate]);
 
-  // 所属メンバー取得(担当者プルダウン用)
+  // プロジェクトメンバー一覧を取得する。
+  // GET /api/projects/:projectId/members で担当者の選択肢を取得する。
+  // 取得失敗時もタスク登録自体は続行できるようにプルダウンを空のまま表示する。
   const fetchMembers = useCallback(async () => {
     setMembersLoading(true);
     try {
@@ -52,17 +61,17 @@ export function TaskRegisterPage() {
         setMembers(data);
       }
     } catch {
-      // メンバー取得失敗時はプルダウンを空のまま継続
+      // メンバー取得失敗時はプルダウンを空のまま継続（タスク登録は可能）
     } finally {
       setMembersLoading(false);
     }
   }, [projectId, handleUnauthorized]);
 
-  // タブの名前
   useEffect(() => {
     document.title = "タスク登録 - TaskFlow";
   }, []);
 
+  // StrictMode による二重実行を防ぐため initialized フラグを使用する
   const initialized = useRef(false);
   useEffect(() => {
     if (initialized.current) return;
@@ -70,12 +79,15 @@ export function TaskRegisterPage() {
     fetchMembers();
   }, [fetchMembers]);
 
-  // タスク一覧画面に遷移
+  // タスク一覧ページへ戻る（登録をキャンセルした場合）
   const handleCancel = () => {
     navigate(`/tasks?project_id=${projectId}&user_id=${userId}`);
   };
 
-  // タスク登録
+  // タスク登録処理。
+  // POST /api/tasks にタイトル・説明・担当者IDを送信する。
+  // 担当者が未選択（assigneeId が空）の場合は user_name フィールドを送らない。
+  // 登録成功後はタスク一覧ページへ戻る。
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setSubmitting(true);
@@ -87,6 +99,7 @@ export function TaskRegisterPage() {
         title: title.trim(),
         content,
       };
+      // 担当者が選択されている場合のみリクエストに含める
       if (assigneeId) {
         body.user_name = Number(assigneeId);
       }
@@ -110,7 +123,7 @@ export function TaskRegisterPage() {
         setError(data.message ?? "タスクの登録に失敗しました");
         return;
       }
-      // 登録成功後タスク一覧画面に遷移
+      // 登録成功後タスク一覧画面に遷移する
       navigate(`/tasks?project_id=${projectId}&user_id=${userId}`);
     } catch {
       setError("サーバーに接続できませんでした");
@@ -124,6 +137,7 @@ export function TaskRegisterPage() {
       <h1 className="task-register-title">タスク登録</h1>
 
       <form className="task-register-form" onSubmit={handleSubmit}>
+        {/* タイトルは必須入力 */}
         <input
           className="task-register-input"
           type="text"
@@ -135,6 +149,7 @@ export function TaskRegisterPage() {
           disabled={submitting}
         />
 
+        {/* 説明は任意入力 */}
         <textarea
           className="task-register-textarea"
           value={content}
@@ -143,6 +158,7 @@ export function TaskRegisterPage() {
           disabled={submitting}
         />
 
+        {/* 担当者は任意選択。メンバー一覧取得中は disabled にする */}
         <select
           className="task-register-select"
           value={assigneeId}
@@ -168,6 +184,7 @@ export function TaskRegisterPage() {
           >
             キャンセル
           </button>
+          {/* タイトルが空の場合は登録ボタンを無効化する */}
           <button
             type="submit"
             className="task-register-btn-submit"
