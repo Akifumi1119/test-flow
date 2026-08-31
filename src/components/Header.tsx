@@ -43,6 +43,7 @@ export function Header({ userName, onNameUpdate }: Props) {
   const [removingProjectId, setRemovingProjectId] = useState<number | null>(
     null,
   );
+  const [confirmLeaveProjectId, setConfirmLeaveProjectId] = useState<number | null>(null);
   const [leaveError, setLeaveError] = useState<string | null>(null);
 
   const [confirmDeleteAccount, setConfirmDeleteAccount] = useState(false);
@@ -112,6 +113,7 @@ export function Header({ userName, onNameUpdate }: Props) {
     setProfileOpen(false);
     setSaveError(null);
     setLeaveError(null);
+    setConfirmLeaveProjectId(null);
     setConfirmDeleteAccount(false);
     setDeleteError(null);
   };
@@ -166,6 +168,7 @@ export function Header({ userName, onNameUpdate }: Props) {
     );
     if (!project) return;
     setRemovingProjectId(projectId);
+    setConfirmLeaveProjectId(null);
     setLeaveError(null);
     try {
       const res = await fetch(`${API_BASE}/api/users/${userId}`, {
@@ -470,47 +473,49 @@ export function Header({ userName, onNameUpdate }: Props) {
                                   </svg>
                                 </button>
                               </span>
+                            ) : confirmLeaveProjectId === p.project_id ? (
+                              <div className="profile-leave-confirm">
+                                <span className="profile-leave-confirm-text">
+                                  退場しますか？
+                                </span>
+                                <button
+                                  className="profile-leave-confirm-cancel"
+                                  onClick={() => {
+                                    setConfirmLeaveProjectId(null);
+                                    setLeaveError(null);
+                                  }}
+                                  disabled={removingProjectId === p.project_id}
+                                >
+                                  いいえ
+                                </button>
+                                <button
+                                  className="profile-leave-confirm-ok"
+                                  onClick={() => handleLeaveProject(p.project_id)}
+                                  disabled={removingProjectId === p.project_id}
+                                >
+                                  {removingProjectId === p.project_id ? "退場中..." : "はい"}
+                                </button>
+                              </div>
                             ) : (
                               <button
                                 className="profile-project-leave"
-                                onClick={() => handleLeaveProject(p.project_id)}
-                                disabled={removingProjectId === p.project_id}
+                                onClick={() => setConfirmLeaveProjectId(p.project_id)}
                                 aria-label={`${p.project_name} から退場`}
                               >
-                                {removingProjectId === p.project_id ? (
-                                  <svg
-                                    width="14"
-                                    height="14"
-                                    viewBox="0 0 14 14"
-                                    fill="none"
-                                    aria-hidden="true"
-                                  >
-                                    <circle
-                                      cx="7"
-                                      cy="7"
-                                      r="5"
-                                      stroke="currentColor"
-                                      strokeWidth="1.6"
-                                      strokeDasharray="20"
-                                      strokeDashoffset="5"
-                                    />
-                                  </svg>
-                                ) : (
-                                  <svg
-                                    width="14"
-                                    height="14"
-                                    viewBox="0 0 14 14"
-                                    fill="none"
-                                    aria-hidden="true"
-                                  >
-                                    <path
-                                      d="M2 2l10 10M12 2L2 12"
-                                      stroke="currentColor"
-                                      strokeWidth="1.6"
-                                      strokeLinecap="round"
-                                    />
-                                  </svg>
-                                )}
+                                <svg
+                                  width="14"
+                                  height="14"
+                                  viewBox="0 0 14 14"
+                                  fill="none"
+                                  aria-hidden="true"
+                                >
+                                  <path
+                                    d="M2 2l10 10M12 2L2 12"
+                                    stroke="currentColor"
+                                    strokeWidth="1.6"
+                                    strokeLinecap="round"
+                                  />
+                                </svg>
                               </button>
                             )}
                           </div>
