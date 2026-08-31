@@ -345,12 +345,11 @@ export function Header({ userName, onNameUpdate }: Props) {
       {profileOpen && (
         <div
           className="profile-backdrop"
-          onClick={handleCloseProfile}
           aria-modal="true"
           role="dialog"
           aria-labelledby="profile-title"
         >
-          <div className="profile-modal" onClick={(e) => e.stopPropagation()}>
+          <div className="profile-modal">
             <h2 id="profile-title" className="profile-modal-title">
               プロフィール
             </h2>

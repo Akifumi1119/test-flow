@@ -936,10 +936,9 @@ export function TasksPage() {
       )}
 
       {modalOpen && (
-        <div className="tasks-modal-backdrop" onClick={() => closeModal()}>
+        <div className="tasks-modal-backdrop">
           <div
             className="tasks-modal"
-            onClick={(e) => e.stopPropagation()}
             role="dialog"
             aria-modal="true"
             aria-labelledby="tasks-modal-title"
@@ -1122,10 +1121,9 @@ export function TasksPage() {
       )}
 
       {detailModalOpen && (
-        <div className="tasks-modal-backdrop" onClick={closeDetailModal}>
+        <div className="tasks-modal-backdrop">
           <div
             className="tasks-modal tasks-detail-modal"
-            onClick={(e) => e.stopPropagation()}
             role="dialog"
             aria-modal="true"
             aria-labelledby="task-detail-modal-title"
