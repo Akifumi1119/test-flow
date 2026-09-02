@@ -16,6 +16,7 @@ interface Task {
   task_id: number;
   title: string;
   status: number;
+  priority: number | null;
   created_by: string;
   user_name: string;
   created_at: string;
@@ -38,9 +39,11 @@ interface TaskDetail {
   task_id: number;
   title: string;
   status: number;
+  priority: number | null;
   content: string;
   comments: Comment[];
   created_by: string;
+  created_by_id: number;
   user_name: string;
   created_at: string;
 }
@@ -49,6 +52,20 @@ const STATUS_LABEL: Record<number, string> = {
   1: "未着手",
   2: "進行中",
   3: "完了",
+};
+
+const PRIORITY_LABEL: Record<number, string> = {
+  1: "緊急",
+  2: "高",
+  3: "中",
+  4: "低",
+};
+
+const PRIORITY_TO_STRING: Record<number, string> = {
+  1: "urgent",
+  2: "high",
+  3: "medium",
+  4: "low",
 };
 
 function buildAuthHeaders() {
@@ -97,6 +114,7 @@ export function TasksPage() {
   const [editContent, setEditContent] = useState("");
   const [editStatus, setEditStatus] = useState<number>(1);
   const [editAssigneeId, setEditAssigneeId] = useState<number>(0);
+  const [editPriority, setEditPriority] = useState<string>("");
   const [savingContent, setSavingContent] = useState(false);
   const [saveContentError, setSaveContentError] = useState<string | null>(null);
   const [editingCommentId, setEditingCommentId] = useState<number | null>(null);
@@ -169,6 +187,7 @@ export function TasksPage() {
           content: editContent,
           status: editStatus,
           assignee_user_id: editAssigneeId,
+          priority: editPriority,
         }),
       });
       if (res.status === 401) {
@@ -361,6 +380,7 @@ export function TasksPage() {
     setEditContent("");
     setEditStatus(1);
     setEditAssigneeId(0);
+    setEditPriority("");
     setSavingContent(false);
     setSaveContentError(null);
   };
@@ -382,7 +402,9 @@ export function TasksPage() {
   // メンバー追加
   const [memberInput, setMemberInput] = useState("");
   const [memberChecking, setMemberChecking] = useState(false);
-  const [pendingMembers, setPendingMembers] = useState<{ email: string; name: string }[]>([]);
+  const [pendingMembers, setPendingMembers] = useState<
+    { email: string; name: string }[]
+  >([]);
 
   // プロジェクト名編集
   const [editProjectName, setEditProjectName] = useState("");
@@ -472,7 +494,10 @@ export function TasksPage() {
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (searchWrapRef.current && !searchWrapRef.current.contains(e.target as Node)) {
+      if (
+        searchWrapRef.current &&
+        !searchWrapRef.current.contains(e.target as Node)
+      ) {
         setShowSuggestions(false);
       }
     };
@@ -500,7 +525,11 @@ export function TasksPage() {
   // フィルター条件を tasks 配列に適用して表示対象のタスクを絞り込む派生データ。
   // API を呼び出さずクライアントサイドで処理するため、フィルター変更時も高速に反映される。
   const filteredTasks = tasks.filter((task) => {
-    if (filterTitle && !task.title.toLowerCase().includes(filterTitle.toLowerCase())) return false;
+    if (
+      filterTitle &&
+      !task.title.toLowerCase().includes(filterTitle.toLowerCase())
+    )
+      return false;
     if (filterStatus && task.status !== Number(filterStatus)) return false;
     if (filterAssignee) {
       if (filterAssignee === UNASSIGNED) {
@@ -516,14 +545,24 @@ export function TasksPage() {
   // 未割り当てタスクが存在するかどうか。true の場合にのみ担当者フィルターに「未割り当て」選択肢を表示する。
   const hasUnassigned = tasks.some((t) => !t.user_name);
   // タスク一覧から重複を除いた担当者名の配列。フィルタードロップダウンの選択肢として使用する。
-  const assigneeOptions = [...new Set(tasks.map((t) => t.user_name).filter(Boolean))];
+  const assigneeOptions = [
+    ...new Set(tasks.map((t) => t.user_name).filter(Boolean)),
+  ];
   // タスク一覧から重複を除いた作成者名の配列。フィルタードロップダウンの選択肢として使用する。
-  const creatorOptions = [...new Set(tasks.map((t) => t.created_by).filter(Boolean))];
+  const creatorOptions = [
+    ...new Set(tasks.map((t) => t.created_by).filter(Boolean)),
+  ];
   // タイトル検索入力値に部分一致するタスクタイトルの候補一覧。インクリメンタルサーチのサジェストに使用する。
   const titleSuggestions = filterTitle
-    ? [...new Set(tasks.map((t) => t.title).filter((title) =>
-        title.toLowerCase().includes(filterTitle.toLowerCase())
-      ))]
+    ? [
+        ...new Set(
+          tasks
+            .map((t) => t.title)
+            .filter((title) =>
+              title.toLowerCase().includes(filterTitle.toLowerCase()),
+            ),
+        ),
+      ]
     : [];
 
   const initialized = useRef(false);
@@ -813,8 +852,19 @@ export function TasksPage() {
               fill="none"
               aria-hidden="true"
             >
-              <circle cx="6.5" cy="6.5" r="4.5" stroke="currentColor" strokeWidth="1.5" />
-              <path d="M10 10l3.5 3.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+              <circle
+                cx="6.5"
+                cy="6.5"
+                r="4.5"
+                stroke="currentColor"
+                strokeWidth="1.5"
+              />
+              <path
+                d="M10 10l3.5 3.5"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+              />
             </svg>
             <input
               type="search"
@@ -858,7 +908,9 @@ export function TasksPage() {
           >
             <option value="">ステータス: すべて</option>
             {Object.entries(STATUS_LABEL).map(([val, label]) => (
-              <option key={val} value={val}>{label}</option>
+              <option key={val} value={val}>
+                {label}
+              </option>
             ))}
           </select>
           <select
@@ -868,11 +920,11 @@ export function TasksPage() {
             disabled={loading}
           >
             <option value="">担当者: すべて</option>
-            {hasUnassigned && (
-              <option value={UNASSIGNED}>未割り当て</option>
-            )}
+            {hasUnassigned && <option value={UNASSIGNED}>未割り当て</option>}
             {assigneeOptions.map((name) => (
-              <option key={name} value={name}>{name}</option>
+              <option key={name} value={name}>
+                {name}
+              </option>
             ))}
           </select>
           <select
@@ -883,7 +935,9 @@ export function TasksPage() {
           >
             <option value="">作成者: すべて</option>
             {creatorOptions.map((name) => (
-              <option key={name} value={name}>{name}</option>
+              <option key={name} value={name}>
+                {name}
+              </option>
             ))}
           </select>
           {(filterTitle || filterStatus || filterAssignee || filterCreator) && (
@@ -908,6 +962,7 @@ export function TasksPage() {
             <tr>
               <th>タイトル</th>
               <th>ステータス</th>
+              <th>優先度</th>
               <th>作成者</th>
               <th>担当者</th>
               <th>作成日時</th>
@@ -925,6 +980,17 @@ export function TasksPage() {
                   <span className={`tasks-status tasks-status--${task.status}`}>
                     {STATUS_LABEL[task.status] ?? task.status}
                   </span>
+                </td>
+                <td>
+                  {task.priority !== null && task.priority !== undefined ? (
+                    <span
+                      className={`tasks-priority tasks-priority--${task.priority}`}
+                    >
+                      {PRIORITY_LABEL[task.priority] ?? task.priority}
+                    </span>
+                  ) : (
+                    "—"
+                  )}
                 </td>
                 <td>{task.created_by}</td>
                 <td>{task.user_name || "—"}</td>
@@ -1168,6 +1234,35 @@ export function TasksPage() {
                         {STATUS_LABEL[taskDetail.status] ?? taskDetail.status}
                       </span>
                     )}
+                    {isEditingContent ? (
+                      <select
+                        className="tasks-select tasks-detail-status-select"
+                        value={editPriority}
+                        onChange={(e) => setEditPriority(e.target.value)}
+                        disabled={savingContent}
+                      >
+                        <option value="urgent">緊急</option>
+                        <option value="high">高</option>
+                        <option value="medium">中</option>
+                        <option value="low">低</option>
+                        <option value="">指定なし</option>
+                      </select>
+                    ) : (
+                      <p className="tasks-detail-meta-info">
+                        優先度：
+                        {taskDetail.priority !== null &&
+                        taskDetail.priority !== undefined ? (
+                          <span
+                            className={`tasks-priority tasks-priority--${taskDetail.priority}`}
+                          >
+                            {PRIORITY_LABEL[taskDetail.priority] ??
+                              taskDetail.priority}
+                          </span>
+                        ) : (
+                          "—"
+                        )}
+                      </p>
+                    )}
                     <p className="tasks-detail-meta-info">
                       作成者:{taskDetail.created_by}{" "}
                       {formatDate(taskDetail.created_at)}
@@ -1201,6 +1296,7 @@ export function TasksPage() {
                           onClick={() => {
                             setIsEditingContent(false);
                             setEditContent("");
+                            setEditPriority("");
                             setSaveContentError(null);
                             setConfirmDeleteTask(false);
                           }}
@@ -1261,6 +1357,11 @@ export function TasksPage() {
                             (m) => m.name === taskDetail.user_name,
                           );
                           setEditAssigneeId(current?.user_id ?? 0);
+                          setEditPriority(
+                            taskDetail.priority !== null && taskDetail.priority !== undefined
+                              ? (PRIORITY_TO_STRING[taskDetail.priority] ?? "")
+                              : "",
+                          );
                         }}
                       >
                         編集
@@ -1268,6 +1369,14 @@ export function TasksPage() {
                     )}
                   </div>
                 </div>
+                <button
+                  type="button"
+                  className="tasks-detail-close-btn"
+                  onClick={closeDetailModal}
+                  aria-label="タスク詳細を閉じる"
+                >
+                  ×
+                </button>
 
                 {isEditingContent ? (
                   <>

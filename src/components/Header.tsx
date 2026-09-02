@@ -150,6 +150,7 @@ export function Header({ userName, onNameUpdate }: Props) {
       localStorage.setItem("userName", editName.trim());
       onNameUpdate(editName.trim());
       handleCloseProfile();
+      window.location.reload();
     } catch {
       setSaveError("サーバーに接続できませんでした");
     } finally {

@@ -25,6 +25,7 @@ export function TaskRegisterPage() {
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [assigneeId, setAssigneeId] = useState(""); // 担当者のユーザーID（未選択時は空文字）
+  const [priority, setPriority] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -98,6 +99,7 @@ export function TaskRegisterPage() {
         project_id: Number(projectId),
         title: title.trim(),
         content,
+        priority,
       };
       // 担当者が選択されている場合のみリクエストに含める
       if (assigneeId) {
@@ -171,6 +173,19 @@ export function TaskRegisterPage() {
               {m.name}
             </option>
           ))}
+        </select>
+
+        <select
+          className="task-register-select"
+          value={priority}
+          onChange={(e) => setPriority(e.target.value)}
+          disabled={submitting}
+        >
+          <option value="urgent">優先度：緊急</option>
+          <option value="high">優先度：高</option>
+          <option value="medium">優先度：中</option>
+          <option value="low">優先度：低</option>
+          <option value="">優先度：指定なし</option>
         </select>
 
         {error && <ErrorMessage message={error} />}
