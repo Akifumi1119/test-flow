@@ -1187,12 +1187,16 @@ export function TasksPage() {
       )}
 
       {detailModalOpen && (
-        <div className="tasks-modal-backdrop">
+        <div
+          className="tasks-modal-backdrop"
+          onClick={!isEditingContent ? closeDetailModal : undefined}
+        >
           <div
             className="tasks-modal tasks-detail-modal"
             role="dialog"
             aria-modal="true"
             aria-labelledby="task-detail-modal-title"
+            onClick={(e) => e.stopPropagation()}
           >
             {detailLoading && (
               <p className="tasks-detail-loading">読み込み中...</p>
