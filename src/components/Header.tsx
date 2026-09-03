@@ -5,6 +5,7 @@
 // プロフィールモーダルでは名前・メールアドレスの編集、プロジェクトからの退場、アカウント削除が行える。
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { PasswordInput } from "./PasswordInput";
 import { API_BASE } from "../utils/api";
 import "./Header.css";
 
@@ -45,6 +46,13 @@ export function Header({ userName, onNameUpdate }: Props) {
   );
   const [confirmLeaveProjectId, setConfirmLeaveProjectId] = useState<number | null>(null);
   const [leaveError, setLeaveError] = useState<string | null>(null);
+
+  const [passwordAccordionOpen, setPasswordAccordionOpen] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [passwordChanging, setPasswordChanging] = useState(false);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [passwordSuccess, setPasswordSuccess] = useState(false);
 
   const [confirmDeleteAccount, setConfirmDeleteAccount] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -114,6 +122,11 @@ export function Header({ userName, onNameUpdate }: Props) {
     setSaveError(null);
     setLeaveError(null);
     setConfirmLeaveProjectId(null);
+    setPasswordAccordionOpen(false);
+    setCurrentPassword("");
+    setNewPassword("");
+    setPasswordError(null);
+    setPasswordSuccess(false);
     setConfirmDeleteAccount(false);
     setDeleteError(null);
   };
@@ -155,6 +168,37 @@ export function Header({ userName, onNameUpdate }: Props) {
       setSaveError("サーバーに接続できませんでした");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleChangePassword = async () => {
+    setPasswordChanging(true);
+    setPasswordError(null);
+    setPasswordSuccess(false);
+    try {
+      const res = await fetch(`${API_BASE}/api/users/${userId}/password`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("token") ?? ""}`,
+        },
+        body: JSON.stringify({
+          current_password: currentPassword,
+          new_password: newPassword,
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setPasswordError(data.message ?? "パスワードの変更に失敗しました");
+        return;
+      }
+      setCurrentPassword("");
+      setNewPassword("");
+      setPasswordSuccess(true);
+    } catch {
+      setPasswordError("サーバーに接続できませんでした");
+    } finally {
+      setPasswordChanging(false);
     }
   };
 
@@ -354,9 +398,6 @@ export function Header({ userName, onNameUpdate }: Props) {
           aria-labelledby="profile-title"
         >
           <div className="profile-modal">
-            <h2 id="profile-title" className="profile-modal-title">
-              プロフィール
-            </h2>
             <button
               className="profile-close"
               onClick={handleCloseProfile}
@@ -377,6 +418,10 @@ export function Header({ userName, onNameUpdate }: Props) {
                 />
               </svg>
             </button>
+            <div className="profile-modal-body">
+            <h2 id="profile-title" className="profile-modal-title">
+              プロフィール
+            </h2>
 
             <div className="profile-avatar" aria-hidden="true">
               {initial}
@@ -428,6 +473,83 @@ export function Header({ userName, onNameUpdate }: Props) {
                 >
                   {saving ? "保存中..." : "保存"}
                 </button>
+
+                <div className="profile-password-section">
+                  <button
+                    className="profile-accordion-header"
+                    onClick={() => setPasswordAccordionOpen((prev) => !prev)}
+                    aria-expanded={passwordAccordionOpen}
+                  >
+                    <span>パスワードを変更</span>
+                    <svg
+                      className={`profile-accordion-chevron ${passwordAccordionOpen ? "open" : ""}`}
+                      width="16"
+                      height="16"
+                      viewBox="0 0 16 16"
+                      fill="none"
+                      aria-hidden="true"
+                    >
+                      <path
+                        d="M4 6l4 4 4-4"
+                        stroke="currentColor"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  </button>
+                  {passwordAccordionOpen && (
+                    <div className="profile-password-body">
+                      <div className="profile-password-fields">
+                        <PasswordInput
+                          id="profile-current-password"
+                          label="現在のパスワード"
+                          value={currentPassword}
+                          onChange={(e) => {
+                            setCurrentPassword(e.target.value);
+                            setPasswordError(null);
+                            setPasswordSuccess(false);
+                          }}
+                          autoComplete="current-password"
+                          disabled={passwordChanging}
+                        />
+                        <PasswordInput
+                          id="profile-new-password"
+                          label="新しいパスワード"
+                          value={newPassword}
+                          onChange={(e) => {
+                            setNewPassword(e.target.value);
+                            setPasswordError(null);
+                            setPasswordSuccess(false);
+                          }}
+                          autoComplete="new-password"
+                          disabled={passwordChanging}
+                        />
+                      </div>
+                      {passwordError && (
+                        <p className="profile-save-error" role="alert">
+                          {passwordError}
+                        </p>
+                      )}
+                      {passwordSuccess && (
+                        <p className="profile-password-success" role="status">
+                          パスワードを変更しました。
+                        </p>
+                      )}
+                      <button
+                        className="profile-password-btn"
+                        onClick={handleChangePassword}
+                        disabled={
+                          passwordChanging ||
+                          !currentPassword.trim() ||
+                          !newPassword.trim()
+                        }
+                      >
+                        {passwordChanging ? "変更中..." : "変更する"}
+                      </button>
+                    </div>
+                  )}
+                </div>
 
                 {userProfile.projects.length > 0 && (
                   <div className="profile-projects">
@@ -577,6 +699,7 @@ export function Header({ userName, onNameUpdate }: Props) {
                 </div>
               </>
             )}
+            </div>
           </div>
         </div>
       )}
