@@ -5,7 +5,7 @@
 // タスクをクリックすると詳細モーダルが開き、内容の編集・コメント投稿・タスク削除ができる。
 // 管理者（authority === 3）はプロジェクト設定モーダルからメンバー追加・名前変更・責任者変更・プロジェクト削除が行える。
 import { API_BASE } from "../utils/api";
-import { type FormEvent, useEffect, useRef, useState } from "react";
+import { type ChangeEvent, type FormEvent, useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { formatDate } from "../utils/formatDate";
 import { ErrorMessage } from "../components/ErrorMessage";
@@ -20,6 +20,7 @@ interface Task {
   created_by: string;
   user_name: string;
   created_at: string;
+  images: string[];
 }
 
 interface Member {
@@ -33,6 +34,7 @@ interface Comment {
   created_by: string;
   created_by_id: number;
   created_at: string;
+  images: string[];
 }
 
 interface TaskDetail {
@@ -46,6 +48,7 @@ interface TaskDetail {
   created_by_id: number;
   user_name: string;
   created_at: string;
+  images: string[];
 }
 
 const STATUS_LABEL: Record<number, string> = {
@@ -108,6 +111,7 @@ export function TasksPage() {
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailError, setDetailError] = useState<string | null>(null);
   const [commentInput, setCommentInput] = useState("");
+  const [commentImages, setCommentImages] = useState<File[]>([]);
   const [submittingComment, setSubmittingComment] = useState(false);
   const [commentError, setCommentError] = useState<string | null>(null);
   const [isEditingContent, setIsEditingContent] = useState(false);
@@ -328,16 +332,22 @@ export function TasksPage() {
     setSubmittingComment(true);
     setCommentError(null);
     try {
+      const formData = new FormData();
+      formData.append("user_id", userId);
+      formData.append("task_id", String(taskDetail.task_id));
+      formData.append("comment", commentInput);
+      commentImages.forEach((file) => {
+        formData.append("images", file);
+      });
+
       const res = await fetch(
         `${API_BASE}/api/comments/${taskDetail.task_id}`,
         {
           method: "POST",
-          headers: buildAuthHeaders(),
-          body: JSON.stringify({
-            user_id: Number(userId),
-            task_id: taskDetail.task_id,
-            comment: commentInput,
-          }),
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token") ?? ""}`,
+          },
+          body: formData,
         },
       );
       if (res.status === 401) {
@@ -350,6 +360,7 @@ export function TasksPage() {
         return;
       }
       setCommentInput("");
+      setCommentImages([]);
       // コメントを再取得するためにタスク詳細を再取得
       await fetchTaskDetail(taskDetail.task_id);
     } catch {
@@ -359,6 +370,16 @@ export function TasksPage() {
     }
   };
 
+  const handleCommentImageChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []);
+    setCommentImages((prev) => [...prev, ...files]);
+    e.target.value = "";
+  };
+
+  const removeCommentImage = (index: number) => {
+    setCommentImages((prev) => prev.filter((_, i) => i !== index));
+  };
+
   // タスク詳細モーダルを閉じ、モーダル内で使用するすべての state をリセットする。
   // 編集中の内容・コメント・確認ダイアログなどが残らないようにすべての関連 state を初期値に戻す。
   const closeDetailModal = () => {
@@ -366,6 +387,7 @@ export function TasksPage() {
     setTaskDetail(null);
     setDetailError(null);
     setCommentInput("");
+    setCommentImages([]);
     setSubmittingComment(false);
     setCommentError(null);
     setEditingCommentId(null);
@@ -1400,9 +1422,30 @@ export function TasksPage() {
                     )}
                   </>
                 ) : (
-                  <div className="tasks-detail-content">
-                    {taskDetail.content || "—"}
-                  </div>
+                  <>
+                    <div className="tasks-detail-content">
+                      {taskDetail.content || "—"}
+                    </div>
+                    {taskDetail.images?.filter(Boolean).length > 0 && (
+                      <div className="tasks-detail-images">
+                        {taskDetail.images.filter(Boolean).map((url, i) => (
+                          <a
+                            key={i}
+                            href={url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="tasks-image-link"
+                          >
+                            <img
+                              src={url}
+                              alt={`添付画像 ${i + 1}`}
+                              className="tasks-detail-image-thumb"
+                            />
+                          </a>
+                        ))}
+                      </div>
+                    )}
+                  </>
                 )}
 
                 {taskDetail.comments.length > 0 && (
@@ -1467,9 +1510,30 @@ export function TasksPage() {
                                 </div>
                               </>
                             ) : (
-                              <span className="tasks-detail-comment-text">
-                                {c.content}
-                              </span>
+                              <>
+                                <span className="tasks-detail-comment-text">
+                                  {c.content}
+                                </span>
+                                {c.images?.filter(Boolean).length > 0 && (
+                                  <div className="tasks-comment-images">
+                                    {c.images.filter(Boolean).map((url, i) => (
+                                      <a
+                                        key={i}
+                                        href={url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="tasks-image-link"
+                                      >
+                                        <img
+                                          src={url}
+                                          alt={`添付画像 ${i + 1}`}
+                                          className="tasks-comment-image-thumb"
+                                        />
+                                      </a>
+                                    ))}
+                                  </div>
+                                )}
+                              </>
                             )}
                           </div>
                           {c.created_by_id ===
@@ -1540,6 +1604,69 @@ export function TasksPage() {
                   rows={4}
                   disabled={submittingComment}
                 />
+
+                <div className="image-upload-area">
+                  <label
+                    className={`image-upload-btn${submittingComment ? " image-upload-btn--disabled" : ""}`}
+                  >
+                    <input
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      className="image-upload-input"
+                      onChange={handleCommentImageChange}
+                      disabled={submittingComment}
+                    />
+                    <svg
+                      width="15"
+                      height="15"
+                      viewBox="0 0 16 16"
+                      fill="none"
+                      aria-hidden="true"
+                    >
+                      <rect
+                        x="1"
+                        y="3"
+                        width="14"
+                        height="10"
+                        rx="2"
+                        stroke="currentColor"
+                        strokeWidth="1.5"
+                      />
+                      <circle cx="5.5" cy="7" r="1.5" fill="currentColor" />
+                      <path
+                        d="M1 11l4-3 3 2.5 2.5-2 4.5 3.5"
+                        stroke="currentColor"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                    画像を添付
+                  </label>
+                  {commentImages.length > 0 && (
+                    <div className="image-preview-list">
+                      {commentImages.map((file, i) => (
+                        <div key={i} className="image-preview-item">
+                          <img
+                            src={URL.createObjectURL(file)}
+                            alt={file.name}
+                            className="image-preview-thumb"
+                          />
+                          <button
+                            type="button"
+                            className="image-preview-remove"
+                            onClick={() => removeCommentImage(i)}
+                            disabled={submittingComment}
+                            aria-label="画像を削除"
+                          >
+                            ×
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
 
                 {commentError && (
                   <ErrorMessage

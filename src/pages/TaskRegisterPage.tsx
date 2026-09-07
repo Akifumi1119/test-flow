@@ -4,7 +4,7 @@
 // 登録完了後はタスク一覧ページへ戻る。
 import { API_BASE } from "../utils/api";
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { FormEvent } from "react";
+import type { ChangeEvent, FormEvent } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { ErrorMessage } from "../components/ErrorMessage";
 import "./TaskRegisterPage.css";
@@ -26,6 +26,7 @@ export function TaskRegisterPage() {
   const [content, setContent] = useState("");
   const [assigneeId, setAssigneeId] = useState(""); // 担当者のユーザーID（未選択時は空文字）
   const [priority, setPriority] = useState("");
+  const [images, setImages] = useState<File[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -80,6 +81,16 @@ export function TaskRegisterPage() {
     fetchMembers();
   }, [fetchMembers]);
 
+  const handleImageChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []);
+    setImages((prev) => [...prev, ...files]);
+    e.target.value = "";
+  };
+
+  const removeImage = (index: number) => {
+    setImages((prev) => prev.filter((_, i) => i !== index));
+  };
+
   // タスク一覧ページへ戻る（登録をキャンセルした場合）
   const handleCancel = () => {
     navigate(`/tasks?project_id=${projectId}&user_id=${userId}`);
@@ -94,25 +105,25 @@ export function TaskRegisterPage() {
     setSubmitting(true);
     setError(null);
     try {
-      const body: Record<string, unknown> = {
-        created_by: Number(userId),
-        project_id: Number(projectId),
-        title: title.trim(),
-        content,
-        priority,
-      };
-      // 担当者が選択されている場合のみリクエストに含める
+      const formData = new FormData();
+      formData.append("created_by", userId);
+      formData.append("project_id", projectId);
+      formData.append("title", title.trim());
+      formData.append("content", content);
+      formData.append("priority", priority);
       if (assigneeId) {
-        body.user_name = Number(assigneeId);
+        formData.append("user_name", assigneeId);
       }
+      images.forEach((file) => {
+        formData.append("images", file);
+      });
 
       const res = await fetch(`${API_BASE}/api/tasks`, {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
           Authorization: `Bearer ${localStorage.getItem("token") ?? ""}`,
         },
-        body: JSON.stringify(body),
+        body: formData,
       });
 
       if (res.status === 401) {
@@ -159,6 +170,70 @@ export function TaskRegisterPage() {
           placeholder="説明"
           disabled={submitting}
         />
+
+        {/* 画像添付（任意） */}
+        <div className="image-upload-area">
+          <label
+            className={`image-upload-btn${submitting ? " image-upload-btn--disabled" : ""}`}
+          >
+            <input
+              type="file"
+              accept="image/*"
+              multiple
+              className="image-upload-input"
+              onChange={handleImageChange}
+              disabled={submitting}
+            />
+            <svg
+              width="15"
+              height="15"
+              viewBox="0 0 16 16"
+              fill="none"
+              aria-hidden="true"
+            >
+              <rect
+                x="1"
+                y="3"
+                width="14"
+                height="10"
+                rx="2"
+                stroke="currentColor"
+                strokeWidth="1.5"
+              />
+              <circle cx="5.5" cy="7" r="1.5" fill="currentColor" />
+              <path
+                d="M1 11l4-3 3 2.5 2.5-2 4.5 3.5"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+            画像を添付
+          </label>
+          {images.length > 0 && (
+            <div className="image-preview-list">
+              {images.map((file, i) => (
+                <div key={i} className="image-preview-item">
+                  <img
+                    src={URL.createObjectURL(file)}
+                    alt={file.name}
+                    className="image-preview-thumb"
+                  />
+                  <button
+                    type="button"
+                    className="image-preview-remove"
+                    onClick={() => removeImage(i)}
+                    disabled={submitting}
+                    aria-label="画像を削除"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
 
         {/* 担当者は任意選択。メンバー一覧取得中は disabled にする */}
         <select
