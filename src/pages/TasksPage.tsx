@@ -410,6 +410,17 @@ export function TasksPage() {
   // 画面下部に一時的なトースト通知を表示する仕組み。
   // addToast でメッセージを追加し、3秒後に自動で消える。
   // 複数のトーストを同時表示できるよう ID で管理する。
+  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!lightboxUrl) return;
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setLightboxUrl(null);
+    };
+    document.addEventListener("keydown", handleKey);
+    return () => document.removeEventListener("keydown", handleKey);
+  }, [lightboxUrl]);
+
   const [toasts, setToasts] = useState<{ id: number; message: string }[]>([]);
   const toastIdRef = useRef(0);
   const addToast = (message: string) => {
@@ -1429,19 +1440,19 @@ export function TasksPage() {
                     {taskDetail.images?.filter(Boolean).length > 0 && (
                       <div className="tasks-detail-images">
                         {taskDetail.images.filter(Boolean).map((url, i) => (
-                          <a
+                          <button
                             key={i}
-                            href={url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="tasks-image-link"
+                            type="button"
+                            className="tasks-image-btn"
+                            onClick={() => setLightboxUrl(url)}
+                            aria-label={`添付画像 ${i + 1} を拡大表示`}
                           >
                             <img
                               src={url}
                               alt={`添付画像 ${i + 1}`}
                               className="tasks-detail-image-thumb"
                             />
-                          </a>
+                          </button>
                         ))}
                       </div>
                     )}
@@ -1517,19 +1528,19 @@ export function TasksPage() {
                                 {c.images?.filter(Boolean).length > 0 && (
                                   <div className="tasks-comment-images">
                                     {c.images.filter(Boolean).map((url, i) => (
-                                      <a
+                                      <button
                                         key={i}
-                                        href={url}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="tasks-image-link"
+                                        type="button"
+                                        className="tasks-image-btn"
+                                        onClick={() => setLightboxUrl(url)}
+                                        aria-label={`添付画像 ${i + 1} を拡大表示`}
                                       >
                                         <img
                                           src={url}
                                           alt={`添付画像 ${i + 1}`}
                                           className="tasks-comment-image-thumb"
                                         />
-                                      </a>
+                                      </button>
                                     ))}
                                   </div>
                                 )}
@@ -1688,6 +1699,31 @@ export function TasksPage() {
               </>
             )}
           </div>
+        </div>
+      )}
+
+      {lightboxUrl && (
+        <div
+          className="tasks-lightbox-backdrop"
+          onClick={() => setLightboxUrl(null)}
+          role="dialog"
+          aria-modal="true"
+          aria-label="画像ビューア"
+        >
+          <button
+            type="button"
+            className="tasks-lightbox-close"
+            onClick={() => setLightboxUrl(null)}
+            aria-label="閉じる"
+          >
+            ×
+          </button>
+          <img
+            src={lightboxUrl}
+            alt="拡大表示"
+            className="tasks-lightbox-img"
+            onClick={(e) => e.stopPropagation()}
+          />
         </div>
       )}
 
